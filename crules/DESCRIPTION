@@ -1,0 +1,13 @@
+Package: crules
+Type: Package
+Title: Sequential covering decision rules induction.
+Version: 1.0
+Date: 2011-12-08
+Author: crules package - Wojciech Malara, algorithm - Marek Sikora & Lukasz Wrobel
+Maintainer: Wojciech Malara <wojcmal238@student.polsl.pl>
+Description: Crules package provides functions for sequential covering decision rules induction, classification based on decision rules and performing cross-validation.
+LazyLoad: yes
+License: GPL (>= 2)
+Depends: methods, Rcpp (>= 0.9.7)
+LinkingTo: Rcpp
+RcppModules: crules_mod
