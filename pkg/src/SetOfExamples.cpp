@@ -150,7 +150,7 @@ int SetOfExamples::getAllClassesCount()
  */
 void SetOfExamples::shuffle()
 {
-    random_shuffle(examples.begin(), examples.end());
+    random_shuffle(examples.begin(), examples.end(), [](ptrdiff_t i) { return rand()%i;});
 }
 
 /**

@@ -25,23 +25,21 @@
  */
 class RInterface {
 public:
-    RInterface() { srand ( unsigned ( time (NULL) ) ); }
-
     Rcpp::List generateRules(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
             SEXP x, std::vector<std::string> xtypes, std::vector<std::string> xnames, SEXP xlevels,
-            std::string rqmPrune, std::string rqmGrow, SEXP rqmPruneCustom, SEXP rqmGrowCustom, std::vector<double> weights);
+            std::string rqmPrune, std::string rqmGrow, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
+            std::vector<double> weights, double fseed);
 
     Rcpp::List predict(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
             SEXP x, std::vector<std::string> xtypes,
             std::vector<std::string> xnames, SEXP xlevels, std::vector<std::string> _serialRules,std::vector<double> confidenceDegrees,
-            std::vector<double> weights);
+            std::vector<double> weights, double fseed);
 
     Rcpp::List crossValidation(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
             SEXP x, std::vector<std::string> xtypes, std::vector<std::string> xnames, SEXP xlevels,
             std::string rqmPrune, std::string rqmGrow, int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom,
-            SEXP rqmGrowCustom, std::vector<double> weights, bool useWeightsInPrediction);
+            SEXP rqmGrowCustom, std::vector<double> weights, bool useWeightsInPrediction, double fseed);
 
-    static double decrement(double arg) { return --arg; }	//helper function
 private:
     DataSet* createDataSet(std::vector<double>& y, std::string& yname, std::vector<std::string>& ylevels,
             SEXP& x, std::vector<std::string>& xtypes,

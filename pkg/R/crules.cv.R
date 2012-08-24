@@ -5,14 +5,14 @@ crules.cv <- function(formula, data, q, qsplit=q, folds=10, runs=1,
 {
 	if(runs <= 0 || folds <= 1 || folds > nrow(data))
 		stop("Incorrect number of folds or runs")
-	par <- prepare.data(formula, data, q, qsplit, weights)
+	par <- .prepare.data(formula, data, q, qsplit, weights)
 	rarc <- new( RInterface)
 	result <- rarc$crossValidation( par$y, par$yname, par$ylevels,  par$x, par$xtypes, 
 			par$xnames, par$xlevels, par$q, par$qsplit, 
 			folds, runs, 
 			everyClassInFold, par$qfun, par$qsplitfun, 
 			par$weights, 
-			useWeightsInPrediction)
+			useWeightsInPrediction, runif(1))
 	size <- folds * runs
 	rules <- vector("list", size)
 	results <- vector("list", size)
@@ -21,7 +21,7 @@ crules.cv <- function(formula, data, q, qsplit=q, folds=10, runs=1,
 			result[[run]][[fold]][[1]] <- new("crules", rules = result[[run]][[fold]][[1]],  
 					yname = par$yname, ylevels = par$ylevels, xnames = par$xnames,
 					xlevels = par$xlevels, xtypes = par$xtypes, call = match.call(expand.dots = FALSE))
-			result[[run]][[fold]][[2]] <- prep.pred.res(result[[run]][[fold]][[2]], 
+			result[[run]][[fold]][[2]] <- .prep.pred.res(result[[run]][[fold]][[2]], 
 					result[[run]][[fold]][[1]]@ylevels)
 		}
 	}
@@ -108,10 +108,10 @@ setMethod("as.data.frame", "crules.cv", function(x){
 					acc[num] <- x@results[[run]][[fold]][[2]]$acc
 					avg_acc[num] <- x@results[[run]][[fold]][[2]]$bac
 					cov[num] <- x@results[[run]][[fold]][[2]]$cov
-					rulesCount[num] <- x@results[[run]][[fold]][[1]]@rules$NumberOfRules
-					avg_conditions[num] <- x@results[[run]][[fold]][[1]]@rules$AvgNumberOfConditions
-					avg_rule_acc[num] <- x@results[[run]][[fold]][[1]]@rules$AvgRulesPrecision
-					avg_rule_cov[num] <- x@results[[run]][[fold]][[1]]@rules$AvgRulesCoverage
+					rulesCount[num] <- length(x@results[[run]][[fold]][[1]]@rules$Rules)
+					avg_conditions[num] <- mean(x@results[[run]][[fold]][[1]]@rules$NumbersOfConditions)
+					avg_rule_acc[num] <- mean(x@results[[run]][[fold]][[1]]@rules$RulesPrecisions)
+					avg_rule_cov[num] <- mean(x@results[[run]][[fold]][[1]]@rules$RulesCoverages)
 				}
 			}
 			resFrame <- data.frame(dataset, experiment, runs,iteration,acc,avg_acc,cov,

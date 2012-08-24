@@ -4,86 +4,103 @@ setClass("crules", representation(rules = "list",  yname = "character",
 				call = "call"))
 
 
-crules.print <- function(x){
+.crules.print <- function(x){
 	print(data.frame(Rule = x@rules$Rules, Precision = x@rules$RulesPrecisions, 
 					Coverage = x@rules$RulesCoverages, "P-value" = x@rules$Pvalues), 
 			right = FALSE)
 }
 
-setMethod("print", "crules", crules.print)
-#setMethod("show", "crules", crules.print)
+setMethod("print", "crules", .crules.print)
+setMethod("show", "crules", .crules.print)
 
-q.names = c("g2", "lift", "ls", "rss", "corr", "s", "c1", "c2", "cn2", "gain")
-qsplit.names <- c(q.names, "entropy")
-
-prepare.data <- function(formula, data, q, qsplit, weights){
+.prepare.data <- function(formula, data, q, qsplit, weights){
 	#measures
-	if(is.character(q)){
-		
+	q.names = c("g2", "lift", "ls", "rss", "corr", "s", "c1", "c2", "cn2", "gain")
+	qsplit.names <- c(q.names, "entropy")
+	
+	if(is.character(q)){	
 		q <- match.arg(q, q.names)
 		qfun <- NULL
 	}
 	else if(is.function(q)){
+		if(length(formals(q)) != 4) stop("Custom rule quality measure must be a function with four parameters")
 		qfun <- q
 		qsplit  #forcing the promise
 		q <- ""
 	}
 	if(is.character(qsplit)){
-		
 		qsplit <- match.arg(qsplit, qsplit.names)
 		qsplitfun <- NULL
 	}
 	else if(is.function(qsplit)){
+		if(length(formals(qsplit)) != 4) stop("Custom rule quality measure must be a function with four parameters")
 		qsplitfun <- qsplit
 		qsplit <- ""
 	}
 	
 	#data evaluation
-	mf <- match.call(expand.dots = FALSE)
-	m <- match(c("formula", "data"), names(mf), 0)
-	mf <- mf[c(1, m)]
-	mf$na.action <- na.pass
-	mf$drop.unused.levels <- FALSE
-	mf[[1]] <- as.name("model.frame") 
-	m <- eval.parent(mf)
-	y <- model.response(m)
-	x <- m[, -1, drop = FALSE]
-	if(is.numeric(y)) stop("Response cannot be of numerical type")
+	mf <- model.frame(formula, data, na.action=na.pass)
+	y <- mf[,1, drop=TRUE]
+	if(is.factor(y) || is.character(y) || is.logical(y)){
+		y <- as.factor(y)
+	}
+	else
+		stop("Decision attribute can only be of factor, character or logical type")
+	
+	x <- mf[,-1, drop=FALSE]
+	
 	#weights:
+	weights <- .check.weights(weights)
+	
+	#levels, names, types
+	yname <- names(mf[,1, drop=FALSE])
+	ylevels <- levels(y)
+	xdata <- .prepare.xdata(x)
+	
+	list(y = y, yname = yname, ylevels = ylevels, x = x, xtypes = xdata$xtypes, xnames = xdata$xnames,
+			xlevels = xdata$xlevels, q = q, qsplit = qsplit, qfun = qfun, qsplitfun = qsplitfun,
+			weights = weights)
+}
+
+.check.weights <- function(weights){
 	if(missing(weights))
-		weights <- vector("numeric")
+		return(vector("numeric"))
 	else if(length(weights) != length(y))
 		stop("weights vector should be the same length as the number of examples")
 	else if(any(weights <= 0))
 		stop("weights cannot be negative numbers")
-	#levels, names, types
-	yname <- names(m)[1]
-	ylevels <- levels(m[,1])
+}
+
+.prepare.xdata <- function(x){
 	xncol <- ncol(x)
 	xnames <- vector("character", xncol)
 	xtypes <- vector("character", xncol)
 	xlevels <- vector("list", xncol)
 	for(i in 1:xncol){
 		xnames[i] <- names(x)[i]
-		xtypes[i] <- class(x[,i])
-		if(xtypes[i] != "numeric" && xtypes[i] != "integer"){
+		if(is.numeric(x[,i])){
+			xtypes[i] <- "numeric"
+		}
+		else if(is.factor(x[,i]) || is.character(x[,i]) || is.logical(x[,i])){
+			xtypes[i] <- "factor"
+			x[,i] <- as.factor(x[,i])
 			xlevels[[i]] <- levels(x[,i])
 		}
+		else
+			stop("Conditional attributes can only be of numeric, factor, character or logical type")
 	}
-	list(y = y, yname = yname, ylevels = ylevels, x = x, xtypes = xtypes, xnames = xnames,
-			xlevels = xlevels, q = q, qsplit = qsplit, qfun = qfun, qsplitfun = qsplitfun,
-			weights = weights)
+	list(xnames = xnames, xtypes = xtypes, xlevels = xlevels)
 }
 
 crules <- function(formula, data, q, qsplit = q, weights)
 {
-	par <- prepare.data(formula, data, q, qsplit, weights)
+	par <- .prepare.data(formula, data, q, qsplit, weights)
 	#create object and call the method
 	rarc <- new( RInterface)
 	rules <- rarc$generateRules( par$y, par$yname, par$ylevels,  par$x, par$xtypes, 
 			par$xnames, par$xlevels, 
 			par$q, par$qsplit, par$qfun, par$qsplitfun, 
-			par$weights )
+			par$weights, runif(1) )
 	#return object of crules class
 	new("crules", rules = rules,  yname = par$yname,
 			ylevels = par$ylevels, xnames = par$xnames,
@@ -104,7 +121,7 @@ setMethod("summary", "crules", function(object){
 							"Average p-value of rules:"))
 		})
 
-prep.pred.res <- function(preds, classes){
+.prep.pred.res <- function(preds, classes){
 	preds$predictions <- factor(classes[preds$predictions + 1], levels = classes)
 	
 	if(length(preds$confusionMatrix) > 0)
@@ -134,7 +151,6 @@ prep.pred.res <- function(preds, classes){
 }
 
 setMethod("predict", "crules", function(object, newdata, weights){
-			
 			yindex <- match(object@yname, names(newdata))
 			if(is.na(yindex))
 				y <- vector("numeric")
@@ -142,32 +158,19 @@ setMethod("predict", "crules", function(object, newdata, weights){
 				y <- newdata[,yindex]
 			
 			#weights:
-			if(missing(weights))
-				weights <- vector("numeric")
-			else if(length(weights) != length(y))
-				stop("weights vector should be the same length as the number of examples")
-			else if(any(weights <= 0))
-				stop("weights cannot be negative numbers")
+			weights <- .check.weights(weights)
 			
 			cols <- match(object@xnames, names(newdata))
 			x <- newdata[cols]
-			xncol <- ncol(x)
-			xnames <- vector("character", xncol)
-			xtypes <- vector("character", xncol)
-			xlevels <- vector("list", xncol)
-			for(i in 1:xncol){
-				xnames[i] <- names(x)[i]
-				xtypes[i] <- class(x[,i])
-				if(xtypes[i] != "numeric" && xtypes[i] != "integer"){
-					xlevels[[i]] <- levels(x[,i])
-				}
-			}
-			if(length(xnames) < length(object@xnames))
+			xdata <- .prepare.xdata(x)
+			
+			if(length(xdata$xnames) < length(object@xnames))
 				stop("Attributes in new data should match attributes used to generate rules")
+			
 			rarc <- new( RInterface)
-			preds <- rarc$predict(y, object@yname, object@ylevels, x, xtypes, xnames, xlevels,
-					object@rules$Rules, object@rules$ConfidenceDegrees, weights)
+			preds <- rarc$predict(y, object@yname, object@ylevels, x, xdata$xtypes, xdata$xnames, 
+					xdata$xlevels, object@rules$Rules, object@rules$ConfidenceDegrees, weights, runif(1))
 			
 			
-			prep.pred.res(preds, object@ylevels)
+			.prep.pred.res(preds, object@ylevels)
 		})

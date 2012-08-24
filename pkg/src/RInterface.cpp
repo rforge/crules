@@ -19,10 +19,12 @@ Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<stri
                                                  SEXP x, vector<string> xtypes,
                                                  vector<string> xnames, SEXP xlevels,
                                                  string rqmPrune, string rqmGrow,
-                                                 SEXP rqmPruneCustom, SEXP rqmGrowCustom, vector<double> weights)
+                                                 SEXP rqmPruneCustom, SEXP rqmGrowCustom,
+                                                 vector<double> weights, double fseed)
 {
     try
     {
+    	srand ( fseed *  numeric_limits<unsigned int>::max());
         //creating data set
         DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
         SetOfExamples examples(*ds, true);
@@ -65,10 +67,11 @@ Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<stri
 Rcpp::List RInterface::predict(vector<double> y, string yname, vector<string> ylevels,
                                            SEXP x, vector<string> xtypes,
                                            vector<string> xnames, SEXP xlevels, vector<string> _serialRules,
-                               vector<double> confidenceDegrees, vector<double> weights)
+                               vector<double> confidenceDegrees, vector<double> weights, double fseed)
 {
     try
     {
+    	srand ( fseed *  numeric_limits<unsigned int>::max());
         DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
         SetOfExamples examples(*ds, true);
         RuleClassifier ruleClassifier(deserializeRules(_serialRules, confidenceDegrees, *ds));
@@ -127,6 +130,7 @@ DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<stri
         att.setName(yname);
         att.setType(Attribute::NOMINAL);
         att.setLevels(ylevels);
+        auto decrement = [](double v) { return --v; };
         transform(y.begin(), y.end(), y.begin(), decrement);    //we may consider using string instead of class indices to prevent changed order of classes
         ds->addAttribute(y, att);
     //}
@@ -255,10 +259,12 @@ Rcpp::List RInterface::crossValidation(vector<double> y, string yname, vector<st
                                                  vector<string> xnames, SEXP xlevels,
                                                  string rqmPrune, string rqmGrow,
                                                  int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-                                                 vector<double> weights, bool useWeightsInPrediction)
+                                                 vector<double> weights, bool useWeightsInPrediction,
+                                                 double fseed)
 {
     try
     {
+    	srand ( fseed *  numeric_limits<unsigned int>::max());
         ////utworzenie zbioru danych
         DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
         SetOfExamples examples(*ds, true);
