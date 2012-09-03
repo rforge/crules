@@ -50,7 +50,7 @@ setMethod("show", "crules", .crules.print)
 	x <- mf[,-1, drop=FALSE]
 	
 	#weights:
-	weights <- .check.weights(weights)
+	weights <- .check.weights(weights, nrow(data))
 	
 	#levels, names, types
 	yname <- names(mf[,1, drop=FALSE])
@@ -62,10 +62,10 @@ setMethod("show", "crules", .crules.print)
 			weights = weights)
 }
 
-.check.weights <- function(weights){
+.check.weights <- function(weights, n){
 	if(missing(weights))
 		return(vector("numeric"))
-	else if(length(weights) != length(y))
+	else if(length(weights) != n)
 		stop("weights vector should be the same length as the number of examples")
 	else if(any(weights <= 0))
 		stop("weights cannot be negative numbers")
@@ -73,11 +73,10 @@ setMethod("show", "crules", .crules.print)
 
 .prepare.xdata <- function(x){
 	xncol <- ncol(x)
-	xnames <- vector("character", xncol)
+	xnames <- names(x)
 	xtypes <- vector("character", xncol)
 	xlevels <- vector("list", xncol)
 	for(i in 1:xncol){
-		xnames[i] <- names(x)[i]
 		if(is.numeric(x[,i])){
 			xtypes[i] <- "numeric"
 		}
@@ -155,21 +154,36 @@ setMethod("predict", "crules", function(object, newdata, weights){
 			if(is.na(yindex))
 				y <- vector("numeric")
 			else
-				y <- newdata[,yindex]
+				y <- factor(newdata[,yindex], levels = object@ylevels)
 			
 			#weights:
-			weights <- .check.weights(weights)
+			weights <- .check.weights(weights, nrow(newdata))
 			
 			cols <- match(object@xnames, names(newdata))
-			x <- newdata[cols]
-			xdata <- .prepare.xdata(x)
-			
-			if(length(xdata$xnames) < length(object@xnames))
+			if(NA %in% cols)
 				stop("Attributes in new data should match attributes used to generate rules")
-			
+			x <- newdata[,cols, drop = FALSE]
+			xncol <- ncol(x)
+			xnames <- names(x)
+			xtypes <- object@xtypes
+			xlevels <- object@xlevels
+			for(i in 1:xncol){
+				if(is.numeric(x[,i])){
+					if(xtypes[i] != "numeric")
+						stop("Wrong attribute type")
+				}
+				else if(is.factor(x[,i]) || is.character(x[,i]) || is.logical(x[,i])){
+					if(xtype[i] != "factor")
+						stop("Wrong attribute type")
+					x[,i] <- factor(x[,i], levels = xlevels[[i]])
+				}
+				else
+					stop("Conditional attributes can only be of numeric, factor, character or logical type")
+			}
+						
 			rarc <- new( RInterface)
-			preds <- rarc$predict(y, object@yname, object@ylevels, x, xdata$xtypes, xdata$xnames, 
-					xdata$xlevels, object@rules$Rules, object@rules$ConfidenceDegrees, weights, runif(1))
+			preds <- rarc$predict(y, object@yname, object@ylevels, x, xtypes, xnames, 
+					xlevels, object@rules$Rules, object@rules$ConfidenceDegrees, weights, runif(1))
 			
 			
 			.prep.pred.res(preds, object@ylevels)
