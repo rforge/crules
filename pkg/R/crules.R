@@ -75,7 +75,7 @@ setMethod("show", "crules", .crules.print)
 	xncol <- ncol(x)
 	xnames <- names(x)
 	xtypes <- vector("character", xncol)
-	xlevels <- vector("list", xncol)
+	xlevels <- list()
 	for(i in 1:xncol){
 		if(is.numeric(x[,i])){
 			xtypes[i] <- "numeric"
@@ -83,7 +83,7 @@ setMethod("show", "crules", .crules.print)
 		else if(is.factor(x[,i]) || is.character(x[,i]) || is.logical(x[,i])){
 			xtypes[i] <- "factor"
 			x[,i] <- as.factor(x[,i])
-			xlevels[[i]] <- levels(x[,i])
+			xlevels[[xnames[i]]] <- levels(x[,i])
 		}
 		else
 			stop("Conditional attributes can only be of numeric, factor, character or logical type")
@@ -173,9 +173,9 @@ setMethod("predict", "crules", function(object, newdata, weights){
 						stop("Wrong attribute type")
 				}
 				else if(is.factor(x[,i]) || is.character(x[,i]) || is.logical(x[,i])){
-					if(xtype[i] != "factor")
+					if(xtypes[i] != "factor")
 						stop("Wrong attribute type")
-					x[,i] <- factor(x[,i], levels = xlevels[[i]])
+					x[,i] <- factor(x[,i], levels = xlevels[[xnames[[i]]]])
 				}
 				else
 					stop("Conditional attributes can only be of numeric, factor, character or logical type")

@@ -17,7 +17,7 @@ using namespace std;
  */
 Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<string> ylevels,
                                                  SEXP x, vector<string> xtypes,
-                                                 vector<string> xnames, SEXP xlevels,
+                                                 vector<string> xnames, Rcpp::List xlevels,
                                                  string rqmPrune, string rqmGrow,
                                                  SEXP rqmPruneCustom, SEXP rqmGrowCustom,
                                                  vector<double> weights, double fseed)
@@ -66,7 +66,7 @@ Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<stri
  */
 Rcpp::List RInterface::predict(vector<double> y, string yname, vector<string> ylevels,
                                            SEXP x, vector<string> xtypes,
-                                           vector<string> xnames, SEXP xlevels, vector<string> _serialRules,
+                                           vector<string> xnames, Rcpp::List xlevels, vector<string> _serialRules,
                                vector<double> confidenceDegrees, vector<double> weights, double fseed)
 {
     try
@@ -120,7 +120,7 @@ Rcpp::List RInterface::predict(vector<double> y, string yname, vector<string> yl
  */
 DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<string>& ylevels,
                                                SEXP& x, vector<string>& xtypes,
-                                               vector<string> xnames, SEXP& xlevels, vector<double>& weights)
+                                               vector<string> xnames, Rcpp::List& xlevels, vector<double>& weights)
 {
     DataSet* ds = new DataSet();
     //if (y.size() > 0)
@@ -136,7 +136,7 @@ DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<stri
     //}
 
     Rcpp::DataFrame dfx(x);
-    Rcpp::DataFrame dfxlevels(xlevels);
+    //Rcpp::DataFrame dfxlevels(xlevels);
     Attribute::AttributeType type;
     for (unsigned int i = 0; i < xtypes.size(); i++)
     {
@@ -147,7 +147,7 @@ DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<stri
         else
         {
             type = Attribute::NOMINAL;
-            Rcpp::StringVector sv((SEXP)dfxlevels[xnames[i]]);
+            Rcpp::StringVector sv((SEXP)xlevels[xnames[i]]);
             att.setLevels(Rcpp::as<vector<string> >(sv));
             transform(xval.begin(), xval.end(), xval.begin(), decrement);
         }
@@ -256,7 +256,7 @@ RuleQualityMeasure* RInterface::createRuleQualityMeasure(string name, SEXP& cust
  */
 Rcpp::List RInterface::crossValidation(vector<double> y, string yname, vector<string> ylevels,
                                                  SEXP x, vector<string> xtypes,
-                                                 vector<string> xnames, SEXP xlevels,
+                                                 vector<string> xnames, Rcpp::List xlevels,
                                                  string rqmPrune, string rqmGrow,
                                                  int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
                                                  vector<double> weights, bool useWeightsInPrediction,
