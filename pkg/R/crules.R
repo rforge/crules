@@ -23,7 +23,6 @@ setMethod("show", "crules", .crules.print)
 		qfun <- NULL
 	}
 	else if(is.function(q)){
-		if(length(formals(q)) != 4) stop("Custom rule quality measure must be a function with four parameters")
 		qfun <- q
 		qsplit  #forcing the promise
 		q <- ""
@@ -33,7 +32,6 @@ setMethod("show", "crules", .crules.print)
 		qsplitfun <- NULL
 	}
 	else if(is.function(qsplit)){
-		if(length(formals(qsplit)) != 4) stop("Custom rule quality measure must be a function with four parameters")
 		qsplitfun <- qsplit
 		qsplit <- ""
 	}
@@ -100,6 +98,8 @@ crules <- function(formula, data, q, qsplit = q, weights)
 			par$xnames, par$xlevels, 
 			par$q, par$qsplit, par$qfun, par$qsplitfun, 
 			par$weights, runif(1) )
+	
+	rm(rarc)
 	#return object of crules class
 	new("crules", rules = rules,  yname = par$yname,
 			ylevels = par$ylevels, xnames = par$xnames,
@@ -181,10 +181,10 @@ setMethod("predict", "crules", function(object, newdata, weights){
 					stop("Conditional attributes can only be of numeric, factor, character or logical type")
 			}
 						
-			rarc <- new( RInterface)
+			rarc <- new(RInterface)
 			preds <- rarc$predict(y, object@yname, object@ylevels, x, xtypes, xnames, 
 					xlevels, object@rules$Rules, object@rules$ConfidenceDegrees, weights, runif(1))
 			
-			
+			rm(rarc)
 			.prep.pred.res(preds, object@ylevels)
 		})

@@ -70,7 +70,7 @@ public:
     CustomMeasure(Rcpp::Function& _rFunction): rFunction(_rFunction) {}
     CustomMeasure(SEXP rFunctionPtr): rFunction(rFunctionPtr) {}
     double EvaluateRuleQualityFromResult(RuleEvaluationResult r) {
-        return Rcpp::as<double>(rFunction(r.P, r.p, r.N, r.n));
+        return Rcpp::as<double>(rFunction(Rcpp::Named("P", r.P), Rcpp::Named("p", r.p), Rcpp::Named("N", r.N), Rcpp::Named("n", r.n)));
     }
 private:
     Rcpp::Function rFunction;

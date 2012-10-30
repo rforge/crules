@@ -13,6 +13,7 @@ crules.cv <- function(formula, data, q, qsplit=q, folds=10, runs=1,
 			everyClassInFold, par$qfun, par$qsplitfun, 
 			par$weights, 
 			useWeightsInPrediction, runif(1))
+	rm(rarc)
 	size <- folds * runs
 	rules <- vector("list", size)
 	results <- vector("list", size)
