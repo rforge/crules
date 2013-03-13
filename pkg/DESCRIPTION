@@ -2,7 +2,7 @@ Package: crules
 Type: Package
 Title: Classification Rules
 Version: 0.1
-Date: 2012-05-05
+Date: 2013-03-12
 Author: Wojciech Malara, Marek Sikora, Lukasz Wrobel
 Maintainer: Wojciech Malara <wojcmal238@student.polsl.pl>
     Lukasz Wrobel <lukasz.wrobel@polsl.pl>
