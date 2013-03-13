@@ -1,4 +1,1 @@
-.onLoad <- function(libname, pkgname) {
-    require("methods", character=TRUE, quietly=TRUE)
-    loadRcppModules()
-}
+loadModule("crules_mod", TRUE)

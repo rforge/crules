@@ -3,12 +3,11 @@ Type: Package
 Title: Classification Rules
 Version: 0.1
 Date: 2013-03-12
-Author: Wojciech Malara, Marek Sikora, Lukasz Wrobel
-Maintainer: Wojciech Malara <wojcmal238@student.polsl.pl>
-    Lukasz Wrobel <lukasz.wrobel@polsl.pl>
+Authors@R: c(person("Wojciech", "Malara", role = c("aut", "cre"), email = "wojcmal238@student.polsl.pl"),
+             person("Marek", "Sikora", role = "aut", email="marek.sikora@polsl.pl"), 
+             person("Lukasz", "Wrobel", role = c("aut", "cre"), email = "lukasz.wrobel@polsl.pl"))
 Description: Classification Rules
-LazyLoad: yes
 License: GPL (>= 2)
-Depends: methods, Rcpp (>= 0.9.7)
+Depends: R (>= 2.15.1), methods, Rcpp (>= 0.10.2)
 LinkingTo: Rcpp
 RcppModules: crules_mod
