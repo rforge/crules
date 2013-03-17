@@ -311,8 +311,8 @@ RuleSetStats RuleClassifier::getRuleSetStats(SetOfExamples& examples)
     {
         nconds = 0;
         for (itVec = it->getConditions().begin(); itVec != it->getConditions().end(); itVec++)
-            for (itCond = itVec->begin(); itCond != itVec->end(); itCond++)
-                nconds++;
+        	if(itVec->size() > 0)
+        		nconds++;
         rer  = RuleQualityMeasure::EvaluateRule(examples, *it);
         stats.condCounts.push_back(nconds);
         stats.precs.push_back(precision.EvaluateRuleQualityFromResult(rer));
