@@ -68,9 +68,9 @@ RuleEvaluationResult RuleQualityMeasure::EvaluateCondition(SetOfExamples& datase
 double NegConditionalEntropy::Entropy(SetOfExamples& examples)
 {
 	set<double> classes;
-	//int size = examples.size();
-        double size = examples.getSumOfWeights();
-	for(int i = 0; i < size; i++)
+	int size = examples.size();
+    double sumOfWeights = examples.getSumOfWeights();
+	for(int i = 0; i < size; i++)	//it's probably wrong because there are only two classes - positive and negative
 		classes.insert(examples[i].getDecisionAttribute());
 
     double sum = 0, p;
@@ -78,7 +78,7 @@ double NegConditionalEntropy::Entropy(SetOfExamples& examples)
     for(it = classes.begin(); it != classes.end(); it++)
     {
         //p = (double)examples.getExamplesForDecAtt(*it).size() / size;
-        p = examples.getExamplesForDecAtt(*it).getSumOfWeights() / size;
+        p = examples.getExamplesForDecAtt(*it).getSumOfWeights() / sumOfWeights;
         if(p != 0)
             sum += p * Log2(p);
         //sum += p * log2(p);
@@ -134,4 +134,24 @@ double NegConditionalEntropy::EvaluateConditionQuality(SetOfExamples& ds, Elemen
     //double result = ((double)s1.size() / (double)size) * Entropy(s1) + ((double)s2.size() / (double)size) * Entropy(s2);
     double result = (s1.getSumOfWeights() / sumOfWeights) * Entropy(s1) + (s2.getSumOfWeights() / sumOfWeights) * Entropy(s2);
     return -result;
+}
+
+double NegConditionalEntropy::ComputeQualityForTwoGroups(double p1, double n1, double p2, double n2)
+{
+	double pn1 = p1 + n1;
+	double pn2 = p2 + n2;
+	double sumOfWeights = pn1 + pn2;
+	double temp;
+
+	temp = p1 / pn1;
+	double entropy1 = temp > 0 ? temp * Log2(temp) : 0;
+	temp = n1 / pn1;
+	entropy1 += temp > 0 ? temp * Log2(temp) : 0;
+
+	temp = p2 / pn2;
+	double entropy2 = temp > 0 ? temp * Log2(temp) : 0;
+	temp = n2 / pn2;
+	entropy2 += temp > 0 ? temp * Log2(temp) : 0;
+
+	return -(pn1 * (-entropy1) + pn2 * (-entropy2)) / sumOfWeights;
 }

@@ -29,22 +29,17 @@ public:
 	void growRule(Rule& rule, SetOfExamples& covered, SetOfExamples uncoveredPositives, RuleQualityMeasure& ruleQualityMeasure);
 	void pruneRule(Rule& rule, SetOfExamples& examples, RuleQualityMeasure& ruleQualityMeasure);
 	SetOfExamples getCoveredExamples(Rule& rule, SetOfExamples& examples);
-        SetOfExamples getCoveredExamples(ElementaryCondition& cond, SetOfExamples& examples);
+    SetOfExamples getCoveredExamples(ElementaryCondition& cond, SetOfExamples& examples);
 private:
 	bool existsCoveredExample(Rule& rule,SetOfExamples& examples);
 	bool existsCoveredExample(ElementaryCondition& condition,SetOfExamples& examples);
 	bool existsExampleWithEqualAttValue(int attIndex, double attValue, SetOfExamples& examples);
-	ElementaryCondition findBestCondition(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm);
-	ElementaryCondition findBestConditionUsingEntropy(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm);
-	void generateElementaryConditions(std::vector<std::list<ElementaryCondition> >& conditions, double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, bool entropy);
-	void generateECForNumericalAtt(std::list<ElementaryCondition>& conds, SetOfExamples& covered, SetOfExamples& uncoveredPositives, int attIndex);
-	void generateECForNumericalAttForEntropy(std::list<ElementaryCondition>& conds, double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, int attIndex);
-	void generateECForNominalAtt(std::list<ElementaryCondition>& conds, SetOfExamples& covered, SetOfExamples& uncoveredPositives, int attIndex);
-	void getDistinctSortedAttributeValues(std::set<double>& values, SetOfExamples& examples, int attIndex);
+	ElementaryCondition findBestCondition(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm, bool isRqmEntropy);
 	ElementaryCondition chooseConditionFromEqual(std::list<ElementaryCondition>& equallyBestConditions, double decClass, SetOfExamples& uncoveredPositives);
+	int getNumberOfValuesLessOrGreater(std::multiset<double>& values, double value, bool takeLess);
 
 	double P; /**< Number of all positive examples*/
-        double N; /**< Number of all negative examples*/
+    double N; /**< Number of all negative examples*/
 };
 
 #endif	/* SEQUENTIALCOVERING_H */

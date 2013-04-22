@@ -166,6 +166,7 @@ public:
     double EvaluateRuleQuality(SetOfExamples& ds, Rule& rule);
     double EvaluateConditionQuality(SetOfExamples& ds, ElementaryCondition& cond, double decClass);
     double Entropy(SetOfExamples& examples);
+    static double ComputeQualityForTwoGroups(double p1, double n1, double p2, double n2);
 };
 
 class Cn2 : public RuleQualityMeasure {
