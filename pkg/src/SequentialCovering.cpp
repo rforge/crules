@@ -111,9 +111,8 @@ ElementaryCondition SequentialCovering::findBestCondition
 {
     double quality, ltQuality, bestQuality = -numeric_limits<double>::max(), currWeight;
     ElementaryCondition bestCondition;
-    RelationalOperator* tempOperator;
     list<ElementaryCondition> equallyBestConditions;
-    bool shouldContinue = false;
+    bool shouldSkip = false;
     int entrLT_p = 0, entrGE_p = 0;
 
     int size = covered.size();
@@ -139,61 +138,53 @@ ElementaryCondition SequentialCovering::findBestCondition
 				for (int j = 0; j < size; j++)
 				{
 					attValue = covered[j].getAttribute(i);
-					if (attValue == attValue) //false if NaN
-					{
-						values.insert(pair<double, int>(attValue, j));
-						if(covered[j].getDecisionAttribute() == decClass)
-							rer_ge.p += covered[j].getWeight();
-						else
-							rer_ge.n +=covered[j].getWeight();
+					if (attValue != attValue) //false if NaN
+						continue;
 
-						if(attValue < prevVal) prevVal = attValue;
-					}
+					values.insert(pair<double, int>(attValue, j));
+
+					if(covered[j].getDecisionAttribute() == decClass)
+						rer_ge.p += covered[j].getWeight();
+					else
+						rer_ge.n +=covered[j].getWeight();
 				}
 
-				double min = numeric_limits<double>::max(), max = -numeric_limits<double>::max();
 				int sizeUnc = uncoveredPositives.size();
-				double value;
 				multiset<double> uncPosValues;
-				if(sizeUnc > 0)
-					min = max = uncoveredPositives[0].getAttribute(i);
-				for(int j = 1; j < sizeUnc; j++)
-				{
-					value = uncoveredPositives[j].getAttribute(i);
-					if(value > max)
-						max = value;
-					else if(value < min)
-						min = value;
 
-					if(isRqmEntropy)
-						uncPosValues.insert(value);
-				}
+				for(int j = 0; j < sizeUnc; j++)
+						uncPosValues.insert(uncoveredPositives[j].getAttribute(i));
 
-				for(multimap<double, int>::iterator val = values.begin(); val != values.end(); val++)
+				double min = *(uncPosValues.begin());
+				double max = *(uncPosValues.rbegin());
+
+				multimap<double, int>::iterator val = values.begin();
+				prevVal = val->first;
+				for(;val != values.end();
+					currClass == decClass ?	(rer_lt.p += currWeight, rer_ge.p -= currWeight)
+										  : (rer_lt.n += currWeight, rer_ge.n -= currWeight), val++)
 				{
 					currClass = covered[val->second].getDecisionAttribute();
 					currWeight = covered[val->second].getWeight();
 
-					if(currClass == decClass)
-						rer_lt.p += currWeight, rer_ge.p -= currWeight;
-					else
-						rer_lt.n += currWeight, rer_ge.n -= currWeight;
-
-					shouldContinue = currClass == prevClass;
+					shouldSkip = currClass == prevClass || prevVal == val->first;
 
 					mean = (prevVal + val->first) / 2;
 					prevVal = val->first;
 					prevClass = currClass;
 
-					if(shouldContinue || (mean <= min && mean > max)) continue;
+					if(shouldSkip)
+						continue;
 
 					quality =  -numeric_limits<double>::max();
 					ltQuality = -numeric_limits<double>::max();
 
 					if(!isRqmEntropy)
 					{
-						quality = mean <= max ? rqm.EvaluateRuleQualityFromResult(rer_ge) : -numeric_limits<double>::max();
-						ltQuality = mean > min ? rqm.EvaluateRuleQualityFromResult(rer_lt) : -numeric_limits<double>::max();
+						if(mean <= max)
+							quality = rqm.EvaluateRuleQualityFromResult(rer_ge);
+						if(mean > min)
+							ltQuality = rqm.EvaluateRuleQualityFromResult(rer_lt);
 					}
 					else
 					{
@@ -208,19 +199,19 @@ ElementaryCondition SequentialCovering::findBestCondition
 							continue;
 					}
 
-					if(ltQuality > quality) quality = ltQuality;
+					if (quality < bestQuality && ltQuality < bestQuality) continue;
 
-					if (quality < bestQuality) continue;
-
-					if(quality > bestQuality)
+					if(quality > bestQuality || ltQuality > bestQuality)
 					{
-						bestQuality = quality;
+						bestQuality = quality > ltQuality ? quality : ltQuality;
 						equallyBestConditions.clear();
 					}
 
-					tempOperator = quality != ltQuality ? (RelationalOperator*) new GreaterEqualOperator() : (RelationalOperator*) new LessThanOperator();
+					if(quality >= ltQuality)
+						equallyBestConditions.push_back(ElementaryCondition(i, new GreaterEqualOperator(), mean));
 
-					equallyBestConditions.push_back(ElementaryCondition(i, tempOperator, mean));
+					if(quality <= ltQuality)
+						equallyBestConditions.push_back(ElementaryCondition(i, new LessThanOperator(), mean));
 				}
 
         }

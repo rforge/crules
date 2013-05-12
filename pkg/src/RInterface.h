@@ -25,38 +25,27 @@
  */
 class RInterface {
 public:
-    Rcpp::List generateRules(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
-            SEXP x, std::vector<std::string> xtypes, std::vector<std::string> xnames, Rcpp::List xlevels,
-            std::string rqmPrune, std::string rqmGrow, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-            std::vector<double> weights, double fseed);
+    Rcpp::List generateRules(Rcpp::List params);
 
-    Rcpp::List predict(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
-            SEXP x, std::vector<std::string> xtypes,
-            std::vector<std::string> xnames, Rcpp::List xlevels, std::vector<std::string> _serialRules,std::vector<double> confidenceDegrees,
-            std::vector<double> weights, double fseed);
+    Rcpp::List predict(Rcpp::List params);
 
-    Rcpp::List crossValidation(std::vector<double> y, std::string yname, std::vector<std::string> ylevels,
-            SEXP x, std::vector<std::string> xtypes, std::vector<std::string> xnames, Rcpp::List xlevels,
-            std::string rqmPrune, std::string rqmGrow, int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom,
-            SEXP rqmGrowCustom, std::vector<double> weights, bool useWeightsInPrediction, double fseed);
+    Rcpp::List crossValidation(Rcpp::List params);
 
 private:
-    DataSet* createDataSet(std::vector<double>& y, std::string& yname, std::vector<std::string>& ylevels,
-            SEXP& x, std::vector<std::string>& xtypes,
-            std::vector<std::string> xnames, Rcpp::List& xlevels, std::vector<double>& weights);
+    DataSet* createDataSet(Rcpp::List& params);
     Rcpp::List serializeRules(RuleClassifier& rules, SetOfExamples& examples);
-    RuleClassifier deserializeRules(std::vector<std::string> _serialRules, std::vector<double>& confidenceDegrees, DataSet& ds);
+    RuleClassifier deserializeRules(std::vector<std::string> _serialRules, std::vector<double> confidenceDegrees, DataSet& ds);
     double resolveConflict(std::list<Rule*>&);
-    RuleQualityMeasure* createRuleQualityMeasure(std::string name, SEXP& customRqm);
+    RuleQualityMeasure* createRuleQualityMeasure(std::string name, SEXP customRqm);
 };
 
 RCPP_MODULE(crules_mod) {
     using namespace Rcpp;
     class_<RInterface > ("RInterface")
             .constructor()
-            .method("generateRules", &RInterface::generateRules, "Generate decision rules using sequential covering")
-            .method("predict", &RInterface::predict, "Predict class values")
-            .method("crossValidation", &RInterface::crossValidation, "Perform n runs of k-fold cross-validation")
+            .method("generateRules", &RInterface::generateRules, "Generates decision rules using sequential covering")
+            .method("predict", &RInterface::predict, "Predicts class values")
+            .method("crossValidation", &RInterface::crossValidation, "Performs n runs of k-fold cross-validation")
             ;
 
 }

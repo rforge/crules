@@ -15,22 +15,27 @@ using namespace std;
  * @param rqmGrow  name of rule quality measure to be used in growing phase
  * @return representation of generated rules and their statistics
  */
-Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<string> ylevels,
-                                                 SEXP x, vector<string> xtypes,
-                                                 vector<string> xnames, Rcpp::List xlevels,
-                                                 string rqmPrune, string rqmGrow,
-                                                 SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-                                                 vector<double> weights, double fseed)
+Rcpp::List RInterface::generateRules(Rcpp::List params)
 {
+
+//	vector<double> y, string yname, vector<string> ylevels,
+//	                                                 SEXP x, vector<string> xtypes,
+//	                                                 vector<string> xnames, Rcpp::List xlevels,
+//	                                                 string rqmPrune, string rqmGrow,
+//	                                                 SEXP rqmPruneCustom, SEXP rqmGrowCustom,
+//	                                                 vector<double> weights, double fseed
+
+
+
     try
     {
-    	srand ( fseed *  numeric_limits<unsigned int>::max());
+    	srand ( Rcpp::as<double>(params["seed"]) *  numeric_limits<unsigned int>::max());
         //creating data set
-        DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
+        DataSet* ds = createDataSet(params);
         SetOfExamples examples(*ds, true);
         //choosing rule quality measure
-        RuleQualityMeasure* rqmGrowPtr = createRuleQualityMeasure(rqmGrow, rqmGrowCustom);
-        RuleQualityMeasure* rqmPrunePtr = createRuleQualityMeasure(rqmPrune, rqmPruneCustom);
+        RuleQualityMeasure* rqmGrowPtr = createRuleQualityMeasure(Rcpp::as<string>(params["qsplit"]), (SEXP)params["qsplitfun"]);
+        RuleQualityMeasure* rqmPrunePtr = createRuleQualityMeasure(Rcpp::as<string>(params["q"]), (SEXP)params["qfun"]);
         //generating rules
         SequentialCovering sc;
         list<Rule> rules = sc.generateRules(examples, *rqmGrowPtr, *rqmPrunePtr);
@@ -64,23 +69,27 @@ Rcpp::List RInterface::generateRules(vector<double> y, string yname, vector<stri
  * @param weights vector of case weights
  * @return predicted class values and statistics of classification
  */
-Rcpp::List RInterface::predict(vector<double> y, string yname, vector<string> ylevels,
-                                           SEXP x, vector<string> xtypes,
-                                           vector<string> xnames, Rcpp::List xlevels, vector<string> _serialRules,
-                               vector<double> confidenceDegrees, vector<double> weights, double fseed)
+Rcpp::List RInterface::predict(Rcpp::List params)
+
+//vector<double> y, string yname, vector<string> ylevels,
+//                                           SEXP x, vector<string> xtypes,
+//                                           vector<string> xnames, Rcpp::List xlevels, vector<string> _serialRules,
+//                               vector<double> confidenceDegrees, vector<double> weights, double fseed)
 {
     try
     {
-    	srand ( fseed *  numeric_limits<unsigned int>::max());
-        DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
+    	srand ( Rcpp::as<double>(params["seed"]) *  numeric_limits<unsigned int>::max());
+        DataSet* ds = createDataSet(params);
         SetOfExamples examples(*ds, true);
-        RuleClassifier ruleClassifier(deserializeRules(_serialRules, confidenceDegrees, *ds));
+        RuleClassifier ruleClassifier(deserializeRules(Rcpp::as<vector<string> >(params["rules"]),
+        												Rcpp::as<vector<double> >(params["confidenceDegrees"]), *ds));
+
         vector<double> predictions = ruleClassifier.classifyExamples(examples);
         double acc = numeric_limits<double>::quiet_NaN();
         double bac = numeric_limits<double>::quiet_NaN();
         ConfusionMatrix cm(0);
         vector<double> classesAccuracies;
-        if (y.size() > 0)
+        if (Rcpp::as<vector<double> >(params["y"]).size() > 0)
         {
             cm = ruleClassifier.generateConfusionMatrixWithWeights(examples, predictions);
             acc = ruleClassifier.evaluateAccuracy(cm);
@@ -118,27 +127,37 @@ Rcpp::List RInterface::predict(vector<double> y, string yname, vector<string> yl
  * @param xlevels 2-dim table of unique values of conditional attributes
  * @return pointer to created DataSet object
  */
-DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<string>& ylevels,
-                                               SEXP& x, vector<string>& xtypes,
-                                               vector<string> xnames, Rcpp::List& xlevels, vector<double>& weights)
+DataSet* RInterface::createDataSet(Rcpp::List& params)
 {
+//	vector<double>& y, string& yname, vector<string>& ylevels,
+//SEXP& x, vector<string>& xtypes,
+//vector<string> xnames, Rcpp::List& xlevels, vector<double>& weights
+
+
     DataSet* ds = new DataSet();
     //if (y.size() > 0)
     //{
+    vector<double> y = Rcpp::as<vector<double> >(params["y"]);
         ds->setDecisionAttributeIndex(0);
         Attribute att;
-        att.setName(yname);
+        att.setName(Rcpp::as<string>(params["yname"]));
         att.setType(Attribute::NOMINAL);
-        att.setLevels(ylevels);
+        att.setLevels(Rcpp::as<vector<string> >(params["ylevels"]));
+
         auto decrement = [](double v) { return --v; };
+
         transform(y.begin(), y.end(), y.begin(), decrement);    //we may consider using string instead of class indices to prevent changed order of classes
         ds->addAttribute(y, att);
     //}
 
-    Rcpp::DataFrame dfx(x);
+    Rcpp::DataFrame dfx((SEXP)params["x"]);
+    Rcpp::StringVector xtypes((SEXP)params["xtypes"]);
+    Rcpp::List xlevels((SEXP)params["xlevels"]);
+    const vector<string>& xnames = Rcpp::as<vector<string> >(params["xnames"]);
+    const vector<double>& weights = Rcpp::as<vector<double> >(params["weights"]);
     //Rcpp::DataFrame dfxlevels(xlevels);
     Attribute::AttributeType type;
-    for (unsigned int i = 0; i < xtypes.size(); i++)
+    for (int i = 0; i < xtypes.size(); i++)
     {
         Attribute att;
         vector<double> xval = Rcpp::as<vector<double> >(dfx[xnames[i]]);
@@ -147,8 +166,7 @@ DataSet* RInterface::createDataSet(vector<double>& y, string& yname, vector<stri
         else
         {
             type = Attribute::NOMINAL;
-            Rcpp::StringVector sv((SEXP)xlevels[xnames[i]]);
-            att.setLevels(Rcpp::as<vector<string> >(sv));
+            att.setLevels(Rcpp::as<vector<string> >(xlevels[xnames[i]]));
             transform(xval.begin(), xval.end(), xval.begin(), decrement);
         }
 
@@ -197,7 +215,7 @@ Rcpp::List RInterface::serializeRules(RuleClassifier& rules, SetOfExamples& exam
  * @param confidenceDegrees vector of confidence degrees for each rule
  * @return RuleClassifier object with inner representation of rules
  */
-RuleClassifier RInterface::deserializeRules(vector<string> _serialRules, vector<double>& confidenceDegrees, DataSet& ds)
+RuleClassifier RInterface::deserializeRules(vector<string> _serialRules, vector<double> confidenceDegrees, DataSet& ds)
 {
     RuleClassifier ruleClassifier;
 
@@ -216,7 +234,7 @@ RuleClassifier RInterface::deserializeRules(vector<string> _serialRules, vector<
  * @param customRqm function passed from R to be used as rqm
  * @return pointer to created RuleQualityMeasure object
  */
-RuleQualityMeasure* RInterface::createRuleQualityMeasure(string name, SEXP& customRqm)
+RuleQualityMeasure* RInterface::createRuleQualityMeasure(string name, SEXP customRqm)
 {
     if (name == "g2") return new TwoMeasure();
     if (name == "lift") return new Lift();
@@ -254,26 +272,33 @@ RuleQualityMeasure* RInterface::createRuleQualityMeasure(string name, SEXP& cust
  * @param useWeightsInPrediction indicates if weights should be used in prediction
  * @return generated rules and statistics for every experiment
  */
-Rcpp::List RInterface::crossValidation(vector<double> y, string yname, vector<string> ylevels,
-                                                 SEXP x, vector<string> xtypes,
-                                                 vector<string> xnames, Rcpp::List xlevels,
-                                                 string rqmPrune, string rqmGrow,
-                                                 int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-                                                 vector<double> weights, bool useWeightsInPrediction,
-                                                 double fseed)
+//Rcpp::List RInterface::crossValidation(vector<double> y, string yname, vector<string> ylevels,
+//                                                 SEXP x, vector<string> xtypes,
+//                                                 vector<string> xnames, Rcpp::List xlevels,
+//                                                 string rqmPrune, string rqmGrow,
+//                                                 int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
+//                                                 vector<double> weights, bool useWeightsInPrediction,
+//                                                 double fseed)
+Rcpp::List RInterface::crossValidation(Rcpp::List params)
 {
     try
     {
-    	srand ( fseed *  numeric_limits<unsigned int>::max());
-        ////utworzenie zbioru danych
-        DataSet* ds = createDataSet(y, yname, ylevels, x, xtypes, xnames, xlevels, weights);
-        SetOfExamples examples(*ds, true);
-        //wybór miar jakości reguły
-        RuleQualityMeasure* rqmGrowPtr = createRuleQualityMeasure(rqmGrow, rqmGrowCustom);
-        RuleQualityMeasure* rqmPrunePtr = createRuleQualityMeasure(rqmPrune, rqmPruneCustom);
+    	srand ( Rcpp::as<double>(params["seed"]) *  numeric_limits<unsigned int>::max());
+		//creating data set
+		DataSet* ds = createDataSet(params);
+		SetOfExamples examples(*ds, true);
+		//choosing rule quality measure
+		RuleQualityMeasure* rqmGrowPtr = createRuleQualityMeasure(Rcpp::as<string>(params["qsplit"]), (SEXP)params["qsplitfun"]);
+		RuleQualityMeasure* rqmPrunePtr = createRuleQualityMeasure(Rcpp::as<string>(params["q"]), (SEXP)params["qfun"]);
+		int runs = Rcpp::as<int>(params["runs"]);
+		int nfolds = Rcpp::as<int>(params["folds"]);
+		bool everyClassInFold = Rcpp::as<bool>(params["everyClassInFold"]);
+		bool useWeightsInPrediction = Rcpp::as<bool>(params["useWeightsInPrediction"]);
+
         //wygenerowanie reguł
         SequentialCovering sc;
         Rcpp::List result;
+
         for (int i = 0; i < runs; i++)
         {
             Rcpp::List runResult;

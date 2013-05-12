@@ -5,23 +5,22 @@ crules.cv <- function(formula, data, q, qsplit=q, folds=10, runs=1,
 {
 	if(runs <= 0 || folds <= 1 || folds > nrow(data))
 		stop("Incorrect number of folds or runs")
-	par <- .prepare.data(formula, data, q, qsplit, weights)
+	params <- .prepare.data(formula, data, q, qsplit, weights)
+	params <- c(params, folds = folds, runs = runs, everyClassInFold = everyClassInFold, 
+				useWeightsInPrediction = useWeightsInPrediction)
+	
 	rarc <- new( RInterface)
-	result <- rarc$crossValidation( par$y, par$yname, par$ylevels,  par$x, par$xtypes, 
-			par$xnames, par$xlevels, par$q, par$qsplit, 
-			folds, runs, 
-			everyClassInFold, par$qfun, par$qsplitfun, 
-			par$weights, 
-			useWeightsInPrediction, runif(1))
+	result <- rarc$crossValidation(params)
 	rm(rarc)
+	
 	size <- folds * runs
 	rules <- vector("list", size)
 	results <- vector("list", size)
 	for(run in 1:runs){
 		for(fold in 1:folds){
 			result[[run]][[fold]][[1]] <- new("crules", rules = result[[run]][[fold]][[1]],  
-					yname = par$yname, ylevels = par$ylevels, xnames = par$xnames,
-					xlevels = par$xlevels, xtypes = par$xtypes, call = match.call(expand.dots = FALSE))
+					yname = params$yname, ylevels = params$ylevels, xnames = params$xnames,
+					xlevels = params$xlevels, xtypes = params$xtypes, call = match.call(expand.dots = FALSE))
 			result[[run]][[fold]][[2]] <- .prep.pred.res(result[[run]][[fold]][[2]], 
 					result[[run]][[fold]][[1]]@ylevels)
 		}

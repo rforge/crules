@@ -68,7 +68,7 @@ public:
     std::vector<double> precs;         /**< rule precisions*/
     std::vector<double> covs;          /**< rule coverages*/
     std::vector<double> pvalues;          /**< p-values*/
-    bool warning;
+    bool warning = false;
 };
 
 #endif	/* RULECLASSIFIER_H */

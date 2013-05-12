@@ -57,7 +57,7 @@ setMethod("show", "crules", .crules.print)
 	
 	list(y = y, yname = yname, ylevels = ylevels, x = x, xtypes = xdata$xtypes, xnames = xdata$xnames,
 			xlevels = xdata$xlevels, q = q, qsplit = qsplit, qfun = qfun, qsplitfun = qsplitfun,
-			weights = weights)
+			weights = weights, seed = runif(1))
 }
 
 .check.weights <- function(weights, n){
@@ -91,19 +91,17 @@ setMethod("show", "crules", .crules.print)
 
 crules <- function(formula, data, q, qsplit = q, weights)
 {
-	par <- .prepare.data(formula, data, q, qsplit, weights)
+	params <- .prepare.data(formula, data, q, qsplit, weights)
 	#create object and call the method
-	rarc <- new( RInterface)
-	rules <- rarc$generateRules( par$y, par$yname, par$ylevels,  par$x, par$xtypes, 
-			par$xnames, par$xlevels, 
-			par$q, par$qsplit, par$qfun, par$qsplitfun, 
-			par$weights, runif(1) )
+	rarc <- new(RInterface)
+	
+	rules <- rarc$generateRules(params)
 	
 	rm(rarc)
 	#return object of crules class
-	new("crules", rules = rules,  yname = par$yname,
-			ylevels = par$ylevels, xnames = par$xnames,
-			xlevels = par$xlevels, xtypes = par$xtypes, call = match.call(expand.dots = FALSE))
+	new("crules", rules = rules,  yname = params$yname,
+			ylevels = params$ylevels, xnames = params$xnames,
+			xlevels = params$xlevels, xtypes = params$xtypes, call = match.call(expand.dots = FALSE))
 }
 
 setMethod("summary", "crules", function(object){
@@ -181,9 +179,11 @@ setMethod("predict", "crules", function(object, newdata, weights){
 					stop("Conditional attributes can only be of numeric, factor, character or logical type")
 			}
 						
+			params <- list(y = y, yname = object@yname, ylevels = object@ylevels, x = x, xtypes = xtypes, 
+						   xnames = xnames, xlevels = xlevels, rules = object@rules$Rules, 
+						   confidenceDegrees = object@rules$ConfidenceDegrees, weights = weights, seed = runif(1))
 			rarc <- new(RInterface)
-			preds <- rarc$predict(y, object@yname, object@ylevels, x, xtypes, xnames, 
-					xlevels, object@rules$Rules, object@rules$ConfidenceDegrees, weights, runif(1))
+			preds <- rarc$predict(params)
 			
 			rm(rarc)
 			.prep.pred.res(preds, object@ylevels)
