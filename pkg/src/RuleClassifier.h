@@ -63,12 +63,12 @@ private:
  */
 class RuleSetStats {
 public:
-    RuleSetStats() {}
+    RuleSetStats() : warning(false) {}
     std::vector<int> condCounts;    /**< number of elementary conditions in rule*/
     std::vector<double> precs;         /**< rule precisions*/
     std::vector<double> covs;          /**< rule coverages*/
     std::vector<double> pvalues;          /**< p-values*/
-    bool warning = false;
+    bool warning;
 };
 
 #endif	/* RULECLASSIFIER_H */
