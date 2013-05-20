@@ -13,13 +13,13 @@ setClass("crules", representation(rules = "list",  yname = "character",
 setMethod("print", "crules", .crules.print)
 setMethod("show", "crules", .crules.print)
 
+crules.qPruneSet <- c("g2", "lift", "ls", "rss", "corr", "s", "c1", "c2", "cn2", "gain")
+crules.qGrowSet <- c(crules.qPruneSet, "entropy")
+
 .prepare.data <- function(formula, data, q, qsplit, weights){
-	#measures
-	q.names = c("g2", "lift", "ls", "rss", "corr", "s", "c1", "c2", "cn2", "gain")
-	qsplit.names <- c(q.names, "entropy")
-	
+
 	if(is.character(q)){	
-		q <- match.arg(q, q.names)
+		q <- match.arg(q, crules.qPruneSet)
 		qfun <- NULL
 	}
 	else if(is.function(q)){
@@ -28,7 +28,7 @@ setMethod("show", "crules", .crules.print)
 		q <- ""
 	}
 	if(is.character(qsplit)){
-		qsplit <- match.arg(qsplit, qsplit.names)
+		qsplit <- match.arg(qsplit, crules.qGrowSet)
 		qsplitfun <- NULL
 	}
 	else if(is.function(qsplit)){

@@ -37,6 +37,7 @@ private:
     RuleClassifier deserializeRules(std::vector<std::string> _serialRules, std::vector<double> confidenceDegrees, DataSet& ds);
     double resolveConflict(std::list<Rule*>&);
     RuleQualityMeasure* createRuleQualityMeasure(std::string name, SEXP customRqm);
+    static double decrement(double value);
 };
 
 RCPP_MODULE(crules_mod) {

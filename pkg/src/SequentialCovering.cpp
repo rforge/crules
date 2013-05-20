@@ -219,7 +219,6 @@ ElementaryCondition SequentialCovering::findBestCondition
         case Attribute::NOMINAL:
         {
         	map<double, RuleEvaluationResult> values;
-        	int size = covered.size();
             double attValue, p = 0, n = 0;
 
             for (int j = 0; j < size; j++)

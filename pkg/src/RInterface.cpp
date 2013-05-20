@@ -17,16 +17,6 @@ using namespace std;
  */
 Rcpp::List RInterface::generateRules(Rcpp::List params)
 {
-
-//	vector<double> y, string yname, vector<string> ylevels,
-//	                                                 SEXP x, vector<string> xtypes,
-//	                                                 vector<string> xnames, Rcpp::List xlevels,
-//	                                                 string rqmPrune, string rqmGrow,
-//	                                                 SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-//	                                                 vector<double> weights, double fseed
-
-
-
     try
     {
     	srand ( Rcpp::as<double>(params["seed"]) *  numeric_limits<unsigned int>::max());
@@ -70,11 +60,6 @@ Rcpp::List RInterface::generateRules(Rcpp::List params)
  * @return predicted class values and statistics of classification
  */
 Rcpp::List RInterface::predict(Rcpp::List params)
-
-//vector<double> y, string yname, vector<string> ylevels,
-//                                           SEXP x, vector<string> xtypes,
-//                                           vector<string> xnames, Rcpp::List xlevels, vector<string> _serialRules,
-//                               vector<double> confidenceDegrees, vector<double> weights, double fseed)
 {
     try
     {
@@ -129,14 +114,8 @@ Rcpp::List RInterface::predict(Rcpp::List params)
  */
 DataSet* RInterface::createDataSet(Rcpp::List& params)
 {
-//	vector<double>& y, string& yname, vector<string>& ylevels,
-//SEXP& x, vector<string>& xtypes,
-//vector<string> xnames, Rcpp::List& xlevels, vector<double>& weights
-
-
     DataSet* ds = new DataSet();
-    //if (y.size() > 0)
-    //{
+
     vector<double> y = Rcpp::as<vector<double> >(params["y"]);
         ds->setDecisionAttributeIndex(0);
         Attribute att;
@@ -144,18 +123,17 @@ DataSet* RInterface::createDataSet(Rcpp::List& params)
         att.setType(Attribute::NOMINAL);
         att.setLevels(Rcpp::as<vector<string> >(params["ylevels"]));
 
-        auto decrement = [](double v) { return --v; };
+        //auto decrement = [](double v) { return --v; };
 
         transform(y.begin(), y.end(), y.begin(), decrement);    //we may consider using string instead of class indices to prevent changed order of classes
         ds->addAttribute(y, att);
-    //}
 
     Rcpp::DataFrame dfx((SEXP)params["x"]);
     Rcpp::StringVector xtypes((SEXP)params["xtypes"]);
     Rcpp::List xlevels((SEXP)params["xlevels"]);
     const vector<string>& xnames = Rcpp::as<vector<string> >(params["xnames"]);
     const vector<double>& weights = Rcpp::as<vector<double> >(params["weights"]);
-    //Rcpp::DataFrame dfxlevels(xlevels);
+
     Attribute::AttributeType type;
     for (int i = 0; i < xtypes.size(); i++)
     {
@@ -254,31 +232,7 @@ RuleQualityMeasure* RInterface::createRuleQualityMeasure(string name, SEXP custo
 
 /**
  * Performs certains number (given by parameter "runs") of runs of k-fold cross validation
-* @param y vector of decision attribute values (or indices in case of nominal attribute)
- * @param yname decision attribute's name
- * @param ylevels unique values of decision attribute
- * @param x values (or indices in case of nominal attributes) of conditional attributes
- * @param xtypes vector of conditional attributes' types
- * @param xnames vector of conditional attributes' names
- * @param xlevels 2-dim table of unique values of conditional attributes
- * @param rqmPrune name of rule quality measure to be used in pruning phase
- * @param rqmGrow  name of rule quality measure to be used in growing phase
- * @param nfolds number of folds in each run of cross-validation
- * @param runs number of cross-validation runs
- * @param everyClassInFold indicates if each fold should contain examples from every class
- * @param rqmPruneCustom function passed from R to be used as custom rule qualisty measure during pruning phase
- * @param rqmGrowCustom function passed from R to be used as custom rule qualisty measure during growing phase
- * @param weights vector of case weights
- * @param useWeightsInPrediction indicates if weights should be used in prediction
- * @return generated rules and statistics for every experiment
- */
-//Rcpp::List RInterface::crossValidation(vector<double> y, string yname, vector<string> ylevels,
-//                                                 SEXP x, vector<string> xtypes,
-//                                                 vector<string> xnames, Rcpp::List xlevels,
-//                                                 string rqmPrune, string rqmGrow,
-//                                                 int nfolds, int runs, bool everyClassInFold, SEXP rqmPruneCustom, SEXP rqmGrowCustom,
-//                                                 vector<double> weights, bool useWeightsInPrediction,
-//                                                 double fseed)
+*/
 Rcpp::List RInterface::crossValidation(Rcpp::List params)
 {
     try
@@ -343,4 +297,9 @@ Rcpp::List RInterface::crossValidation(Rcpp::List params)
         return Rcpp::List();
     }
     return 0;
+}
+
+double RInterface::decrement(double value)
+{
+	return --value;
 }
