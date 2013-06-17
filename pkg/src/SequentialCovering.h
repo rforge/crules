@@ -35,6 +35,10 @@ private:
 	bool existsCoveredExample(ElementaryCondition& condition,SetOfExamples& examples);
 	bool existsExampleWithEqualAttValue(int attIndex, double attValue, SetOfExamples& examples);
 	ElementaryCondition findBestCondition(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm, bool isRqmEntropy);
+	void findBestConditionForNominalAttribute(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives,
+			RuleQualityMeasure& rqm, bool isRqmEntropy, int attributeIndex, std::list<ElementaryCondition>& equallyBestConditions, double& bestQuality);
+	void findBestConditionForNumericalAttribute(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives,
+			RuleQualityMeasure& rqm, bool isRqmEntropy, int attributeIndex, std::list<ElementaryCondition>& equallyBestConditions, double& bestQuality);
 	ElementaryCondition chooseConditionFromEqual(std::list<ElementaryCondition>& equallyBestConditions, double decClass, SetOfExamples& uncoveredPositives);
 	int getNumberOfValuesLessOrGreater(std::multiset<double>& values, double value, bool takeLess);
 

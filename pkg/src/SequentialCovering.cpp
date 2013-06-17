@@ -47,6 +47,7 @@ list<Rule> SequentialCovering::generateRulesForClass(SetOfExamples& examples, Ru
         Rule rule;
         rule.setDecisionClass(decClass);
         growRule(rule, covered, uncoveredPositives, rqmGrow);
+        //cout << rule.toString((covered.getDataSet())) << endl;
         if(precision.EvaluateRuleQuality(covered, rule) <= apriori)
             break;
         pruneRule(rule, examples, rqmPrune);
@@ -81,11 +82,14 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
         bestCondition = findBestCondition(decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy);
         if (bestCondition.getAttributeIndex() == -1)
             break;
+        //cout << "Best condition:" << bestCondition.toString(covered.getDataSet()) << endl;
+
         //checking stop criterion
         rer = RuleQualityMeasure::EvaluateCondition(covered, bestCondition, decClass);
         if (rer.n == 0)
         {
-            rule.addConditionAndOptimize(bestCondition);
+            rule.addCondition(bestCondition);
+            //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
             break;
         }
         coveredCount = rer.p + rer.n;
@@ -94,8 +98,160 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
         covered = getCoveredExamples(bestCondition, covered);
         uncoveredPositives = getCoveredExamples(bestCondition, uncoveredPositives);
         prevCoveredCount = coveredCount;
-        rule.addConditionAndOptimize(bestCondition);
+        rule.addCondition(bestCondition);
+        //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
     }
+}
+
+void SequentialCovering::findBestConditionForNumericalAttribute
+(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives,
+		RuleQualityMeasure& rqm, bool isRqmEntropy, int attributeIndex, list<ElementaryCondition>& equallyBestConditions, double& bestQuality)
+{
+	double mean, quality, ltQuality, currWeight;
+	ElementaryCondition bestCondition;
+	bool shouldSkip = false;
+	int entrLT_p = 0, entrGE_p = 0, size = covered.size();
+	RuleEvaluationResult rer_ge(P, 0, N, 0);
+	RuleEvaluationResult rer_lt(P, 0, N, 0);
+	multimap<double, int> values;
+	double attValue, prevVal = numeric_limits<double>::max(), prevClass = -1, currClass;
+
+	for (int j = 0; j < size; j++)
+	{
+		attValue = covered[j].getAttribute(attributeIndex);
+		if (attValue != attValue) //false if NaN
+			continue;
+
+		values.insert(pair<double, int>(attValue, j));
+
+		if(covered[j].getDecisionAttribute() == decClass)
+			rer_ge.p += covered[j].getWeight();
+		else
+			rer_ge.n +=covered[j].getWeight();
+	}
+
+	int sizeUnc = uncoveredPositives.size();
+	multiset<double> uncPosValues;
+
+	for(int j = 0; j < sizeUnc; j++)
+			uncPosValues.insert(uncoveredPositives[j].getAttribute(attributeIndex));
+
+	double min = *(uncPosValues.begin());
+	double max = *(uncPosValues.rbegin());
+
+	//cout << "Size " << values.size() << "\tMin: " << min << "\tMax: " << max << endl;
+
+	multimap<double, int>::iterator val = values.begin();
+	prevVal = val->first;
+
+	for(;val != values.end();
+		currClass == decClass ?	(rer_lt.p += currWeight, rer_ge.p -= currWeight)
+							  : (rer_lt.n += currWeight, rer_ge.n -= currWeight), val++)
+	{
+		currClass = covered[val->second].getDecisionAttribute();
+		currWeight = covered[val->second].getWeight();
+
+		shouldSkip = currClass == prevClass || prevVal == val->first;
+
+		mean = (prevVal + val->first) / 2;
+		prevVal = val->first;
+		prevClass = currClass;
+
+		if(shouldSkip)
+			continue;
+
+		quality =  -numeric_limits<double>::max();
+		ltQuality = -numeric_limits<double>::max();
+
+		if(!isRqmEntropy)
+		{
+			if(mean <= max)
+				quality = rqm.EvaluateRuleQualityFromResult(rer_ge);
+			if(mean > min)
+				ltQuality = rqm.EvaluateRuleQualityFromResult(rer_lt);
+		}
+		else
+		{
+			entrLT_p = getNumberOfValuesLessOrGreater(uncPosValues, mean, true);
+			entrGE_p = uncPosValues.size() - entrLT_p;
+
+			if(mean <= max && entrGE_p > entrLT_p)
+				quality = NegConditionalEntropy::ComputeQualityForTwoGroups(rer_lt.p, rer_lt.n, rer_ge.p, rer_ge.n);
+			else if(mean > min /*&& entrGE_p <= entrLT_p*/)
+				ltQuality = NegConditionalEntropy::ComputeQualityForTwoGroups(rer_lt.p, rer_lt.n, rer_ge.p, rer_ge.n);
+			else
+				continue;
+		}
+
+		if (quality < bestQuality && ltQuality < bestQuality) continue;
+
+		if(quality > bestQuality || ltQuality > bestQuality)
+		{
+			bestQuality = quality > ltQuality ? quality : ltQuality;
+			equallyBestConditions.clear();
+		}
+
+		if(quality >= ltQuality)
+			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new GreaterEqualOperator(), mean));
+
+		if(quality <= ltQuality)
+			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new LessThanOperator(), mean));
+
+		//cout << "Value: " << mean << "\tltQuality: " << ltQuality << "\tgtQuality: " << quality << endl;
+	}
+}
+
+void SequentialCovering::findBestConditionForNominalAttribute
+(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives,
+		RuleQualityMeasure& rqm, bool isRqmEntropy, int attributeIndex, list<ElementaryCondition>& equallyBestConditions, double& bestQuality)
+{
+	map<double, RuleEvaluationResult> values;
+	int size = covered.size();
+	double attValue, p = 0, n = 0, quality;
+
+	for (int j = 0; j < size; j++)
+	{
+		attValue = covered[j].getAttribute(attributeIndex);
+		if (attValue != attValue) continue; //true if NaN
+
+		if(covered[j].getDecisionAttribute() == decClass)
+			values[attValue].p += covered[j].getWeight();
+		else
+			values[attValue].n += covered[j].getWeight();
+	}
+
+	for(auto val = values.begin(); val != values.end(); val++)
+	{
+		p += val->second.p;
+		n += val->second.n;
+	}
+
+	for(auto val = values.begin(); val != values.end(); val++)
+	{
+		if(!existsExampleWithEqualAttValue(attributeIndex, val->first, uncoveredPositives))
+			continue;
+
+		if(!isRqmEntropy)
+		{
+			val->second.P = P; val->second.N = N;
+			quality = rqm.EvaluateRuleQualityFromResult(val->second);
+		}
+		else
+		{
+			quality = NegConditionalEntropy::ComputeQualityForTwoGroups(val->second.p, val->second.n,
+																		p - val->second.p, n - val->second.n);
+		}
+
+		if (quality < bestQuality) continue;
+
+		if(quality > bestQuality)
+		{
+			bestQuality = quality;
+			equallyBestConditions.clear();
+		}
+
+		equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new EqualityOperator(), val->first));
+	}
 }
 
 /**
@@ -109,11 +265,9 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
 ElementaryCondition SequentialCovering::findBestCondition
 (double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm, bool isRqmEntropy)
 {
-    double quality, ltQuality, bestQuality = -numeric_limits<double>::max(), currWeight;
     ElementaryCondition bestCondition;
     list<ElementaryCondition> equallyBestConditions;
-    bool shouldSkip = false;
-    int entrLT_p = 0, entrGE_p = 0;
+    double bestQuality = -numeric_limits<double>::max();
 
     int size = covered.size();
 
@@ -127,145 +281,11 @@ ElementaryCondition SequentialCovering::findBestCondition
         switch (attributeType)
         {
 			case Attribute::NUMERICAL:
-			{
-				double mean;
-
-				RuleEvaluationResult rer_ge(P, 0, N, 0);
-				RuleEvaluationResult rer_lt(P, 0, N, 0);
-				multimap<double, int> values;
-				double attValue, prevVal = numeric_limits<double>::max(), prevClass = -1, currClass;
-
-				for (int j = 0; j < size; j++)
-				{
-					attValue = covered[j].getAttribute(i);
-					if (attValue != attValue) //false if NaN
-						continue;
-
-					values.insert(pair<double, int>(attValue, j));
-
-					if(covered[j].getDecisionAttribute() == decClass)
-						rer_ge.p += covered[j].getWeight();
-					else
-						rer_ge.n +=covered[j].getWeight();
-				}
-
-				int sizeUnc = uncoveredPositives.size();
-				multiset<double> uncPosValues;
-
-				for(int j = 0; j < sizeUnc; j++)
-						uncPosValues.insert(uncoveredPositives[j].getAttribute(i));
-
-				double min = *(uncPosValues.begin());
-				double max = *(uncPosValues.rbegin());
-
-				multimap<double, int>::iterator val = values.begin();
-				prevVal = val->first;
-				for(;val != values.end();
-					currClass == decClass ?	(rer_lt.p += currWeight, rer_ge.p -= currWeight)
-										  : (rer_lt.n += currWeight, rer_ge.n -= currWeight), val++)
-				{
-					currClass = covered[val->second].getDecisionAttribute();
-					currWeight = covered[val->second].getWeight();
-
-					shouldSkip = currClass == prevClass || prevVal == val->first;
-
-					mean = (prevVal + val->first) / 2;
-					prevVal = val->first;
-					prevClass = currClass;
-
-					if(shouldSkip)
-						continue;
-
-					quality =  -numeric_limits<double>::max();
-					ltQuality = -numeric_limits<double>::max();
-
-					if(!isRqmEntropy)
-					{
-						if(mean <= max)
-							quality = rqm.EvaluateRuleQualityFromResult(rer_ge);
-						if(mean > min)
-							ltQuality = rqm.EvaluateRuleQualityFromResult(rer_lt);
-					}
-					else
-					{
-						entrLT_p = getNumberOfValuesLessOrGreater(uncPosValues, mean, true);
-						entrGE_p = uncPosValues.size() - entrLT_p;
-
-						if(mean <= max && entrGE_p > entrLT_p)
-							quality = NegConditionalEntropy::ComputeQualityForTwoGroups(rer_lt.p, rer_lt.n, rer_ge.p, rer_ge.n);
-						else if(mean > min /*&& entrGE_p <= entrLT_p*/)
-							ltQuality = NegConditionalEntropy::ComputeQualityForTwoGroups(rer_lt.p, rer_lt.n, rer_ge.p, rer_ge.n);
-						else
-							continue;
-					}
-
-					if (quality < bestQuality && ltQuality < bestQuality) continue;
-
-					if(quality > bestQuality || ltQuality > bestQuality)
-					{
-						bestQuality = quality > ltQuality ? quality : ltQuality;
-						equallyBestConditions.clear();
-					}
-
-					if(quality >= ltQuality)
-						equallyBestConditions.push_back(ElementaryCondition(i, new GreaterEqualOperator(), mean));
-
-					if(quality <= ltQuality)
-						equallyBestConditions.push_back(ElementaryCondition(i, new LessThanOperator(), mean));
-				}
-
-        }
-            break;
-        case Attribute::NOMINAL:
-        {
-        	map<double, RuleEvaluationResult> values;
-            double attValue, p = 0, n = 0;
-
-            for (int j = 0; j < size; j++)
-            {
-                attValue = covered[j].getAttribute(i);
-                if (attValue != attValue) continue; //true if NaN
-
-                if(covered[j].getDecisionAttribute() == decClass)
-                	values[attValue].p += covered[j].getWeight();
-                else
-                	values[attValue].n += covered[j].getWeight();
-            }
-
-            for(auto val = values.begin(); val != values.end(); val++)
-			{
-            	p += val->second.p;
-            	n += val->second.n;
-			}
-
-            for(auto val = values.begin(); val != values.end(); val++)
-            {
-            	if(!existsExampleWithEqualAttValue(i, val->first, uncoveredPositives))
-            		continue;
-
-            	if(!isRqmEntropy)
-            	{
-					val->second.P = P; val->second.N = N;
-					quality = rqm.EvaluateRuleQualityFromResult(val->second);
-            	}
-            	else
-            	{
-            		quality = NegConditionalEntropy::ComputeQualityForTwoGroups(val->second.p, val->second.n,
-            																	p - val->second.p, n - val->second.n);
-            	}
-
-            	if (quality < bestQuality) continue;
-
-				if(quality > bestQuality)
-				{
-					bestQuality = quality;
-					equallyBestConditions.clear();
-				}
-
-				equallyBestConditions.push_back(ElementaryCondition(i, new EqualityOperator(), val->first));
-            }
-        }
-            break;
+				findBestConditionForNumericalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
+				break;
+			case Attribute::NOMINAL:
+				findBestConditionForNominalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
+				break;
         }
     }
 
@@ -330,6 +350,7 @@ void SequentialCovering::pruneRule(Rule& rule, SetOfExamples& examples, RuleQual
     Rule tempRule;
     double apriori = P / (P + N);
     Precision precision;
+    ElementaryCondition* conditionToRemove;
     while (1)
     {
         equallyWorstConds.clear();
@@ -351,7 +372,10 @@ void SequentialCovering::pruneRule(Rule& rule, SetOfExamples& examples, RuleQual
             }
         if (equallyWorstConds.empty())
             break;
-        rule.removeCondition(equallyWorstConds[rand() % equallyWorstConds.size()]);
+
+        conditionToRemove = &equallyWorstConds[rand() % equallyWorstConds.size()];
+        rule.removeCondition(*conditionToRemove);
+        //cout << "Removed condition: " << conditionToRemove->toString(examples.getDataSet()) << "\tBestQuality: " << bestQuality << endl;
     }
 }
 
