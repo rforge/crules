@@ -16,7 +16,8 @@ list<Rule> SequentialCoveringWithPreferences::generateRules(SetOfExamples& examp
     vector<double>::iterator it;
     for(it = classes.begin(); it != classes.end(); it++)
     {
-    	if(!knowledge->isGenerateRulesForOtherClasses() && knowledge->getAllowedRules()[*it].size() == 0 && knowledge->getAllowedConditions()[*it].getConditions().size() == 0)
+    	if(!knowledge->isGenerateRulesForOtherClasses() && knowledge->getAllowedRules()[*it].size() == 0 && knowledge->getAllowedConditions()[*it].getConditions().size() == 0
+    			&& knowledge->getForbiddenRules()[*it].size() == 0 && knowledge->getForbiddenConditions()[*it].getConditions().size() == 0)
     		continue;
 
         list<Rule> rulesForClass(generateRulesForClass(examples, rqmGrow, rqmPrune, *it));
@@ -883,7 +884,7 @@ bool SequentialCoveringWithPreferences::isConditionForbiddenInRule(Rule& rule, d
 						}
 					}
 				}
-				else
+				else if(rule.getConditions().size() > itForbCondPrime->getAttributeIndex())
 				{
 					for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
 					{
