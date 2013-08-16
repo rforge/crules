@@ -94,4 +94,17 @@ string DataSet::printData()
     return oss.str();
 }
 
+int DataSet::getConditionalAttributeIndex(std::string name)
+{
+	unsigned int i = 0;
+	while(i < attributes.size() && attributes[i].getName().compare(name) != 0)
+		i++;
+
+	if(i >= decisionAttributeIndex)
+		i--;
+
+	if(i == attributes.size())
+		return -1;
+	return i;
+}
 

@@ -16,6 +16,8 @@ list<Rule> SequentialCovering::generateRules(SetOfExamples& examples, RuleQualit
     vector<double>::iterator it;
     for(it = classes.begin(); it != classes.end(); it++)
     {
+    	//KNOW: if(knowledge[*it].size() == 0 && knowledge.generateRulesForOtherClasses)
+    	//KNOW:	continue;
         list<Rule> rulesForClass(generateRulesForClass(examples, rqmGrow, rqmPrune, *it));
         ruleSet.insert(ruleSet.end(), rulesForClass.begin(), rulesForClass.end());
     }
@@ -41,20 +43,42 @@ list<Rule> SequentialCovering::generateRulesForClass(SetOfExamples& examples, Ru
     double apriori = P / (P + N);
     Precision precision;
     vector<list<ElementaryCondition> >::iterator itVec;
+
+//	KNOW: foreach(rule in knowledge[decClass].rules)
+//	{
+//		SetOfExamples covered(examples);
+//		growSpecifiedRule(rule, covered, uncoveredPositives, rqmGrow, knowlegde);
+//		pruneSPecifiedRule(rules, examples, rqmPrune, knowledge);
+//        uncoveredPositives = uncoveredPositives - covered;
+//        rule.setConfidenceDegree(rqmPrune.EvaluateRuleQuality(examples, rule));
+//        ruleSet.push_back(rule);
+//	}
+
+//    if(!useSpecifiedOnly)
+//    {
+
     while (uncoveredPositives.size() != 0)
     {
         SetOfExamples covered(examples);
         Rule rule;
         rule.setDecisionClass(decClass);
         growRule(rule, covered, uncoveredPositives, rqmGrow);
-        //cout << rule.toString((covered.getDataSet())) << endl;
-        if(precision.EvaluateRuleQuality(covered, rule) <= apriori)
-            break;
         pruneRule(rule, examples, rqmPrune);
+        //cout << rule.toString((covered.getDataSet())) << endl;
+
+        covered = getCoveredExamples(rule, examples);
+
+        if(precision.EvaluateRuleQuality(covered, rule) <= apriori)
+        {
+        	//cout << "precision < apriori" << endl;
+        	//cout << "apriori:  " << apriori << "\tcurrent: " << precision.EvaluateRuleQuality(covered, rule) << endl;
+            break;
+        }
+
+        uncoveredPositives = uncoveredPositives - covered;
         rule.setConfidenceDegree(rqmPrune.EvaluateRuleQuality(examples, rule));
         ruleSet.push_back(rule);
-        covered = getCoveredExamples(rule, examples);
-        uncoveredPositives = uncoveredPositives - covered;
+
 
         //cout << rule.toString(examples.getDataSet()) << endl;
     }
@@ -89,18 +113,72 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
         if (rer.n == 0)
         {
             rule.addCondition(bestCondition);
+        	//rule.addConditionAndOptimize(bestCondition);
             //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
             break;
         }
         coveredCount = rer.p + rer.n;
         if(coveredCount == prevCoveredCount)
             break;
+
         covered = getCoveredExamples(bestCondition, covered);
         uncoveredPositives = getCoveredExamples(bestCondition, uncoveredPositives);
         prevCoveredCount = coveredCount;
         rule.addCondition(bestCondition);
+        //rule.addConditionAndOptimize(bestCondition);
         //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
     }
+}
+
+//KNOW:
+//void CheckCondition(checkedCondition, Rule currentRule, forbiddenRules, allowedConditions, forbiddenConditions)
+//{
+//
+//}
+
+
+/**
+ * Finds the best elementary condition from all possible ones
+ * @param decClass number of positive class
+ * @param covered set of examples covered by current rule
+ * @param uncoveredPositives set of examples not covered by current set of rules but covered by the current rule
+ * @param rqm rule quality measure
+ * @return the best elementary condition
+ */
+ElementaryCondition SequentialCovering::findBestCondition
+(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm, bool isRqmEntropy)
+{
+    ElementaryCondition bestCondition;
+    list<ElementaryCondition> equallyBestConditions;
+    double bestQuality = -numeric_limits<double>::max();
+
+    int size = covered.size();
+
+    if (size == 0)
+        return bestCondition;
+    int numberOfAtts = covered[0].getAttributes().size();
+
+    for (int i = 0; i < numberOfAtts; i++)
+    {
+        Attribute::AttributeType attributeType = covered.getAttributeType(i);
+        switch (attributeType)
+        {
+			case Attribute::NUMERICAL:
+				findBestConditionForNumericalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
+				break;
+			case Attribute::NOMINAL:
+				findBestConditionForNominalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
+				break;
+        }
+    }
+
+    //when more than one condition is the best
+    if (equallyBestConditions.size() == 1)
+        bestCondition = equallyBestConditions.front();
+    else if (equallyBestConditions.size() > 1)
+        bestCondition = chooseConditionFromEqual(equallyBestConditions, decClass, uncoveredPositives);
+
+    return bestCondition;
 }
 
 void SequentialCovering::findBestConditionForNumericalAttribute
@@ -254,50 +332,6 @@ void SequentialCovering::findBestConditionForNominalAttribute
 	}
 }
 
-/**
- * Finds the best elementary condition from all possible ones
- * @param decClass number of positive class
- * @param covered set of examples covered by current rule
- * @param uncoveredPositives set of examples not covered by current set of rules but covered by the current rule
- * @param rqm rule quality measure
- * @return the best elementary condition
- */
-ElementaryCondition SequentialCovering::findBestCondition
-(double decClass, SetOfExamples& covered, SetOfExamples& uncoveredPositives, RuleQualityMeasure& rqm, bool isRqmEntropy)
-{
-    ElementaryCondition bestCondition;
-    list<ElementaryCondition> equallyBestConditions;
-    double bestQuality = -numeric_limits<double>::max();
-
-    int size = covered.size();
-
-    if (size == 0)
-        return bestCondition;
-    int numberOfAtts = covered[0].getAttributes().size();
-
-    for (int i = 0; i < numberOfAtts; i++)
-    {
-        Attribute::AttributeType attributeType = covered.getAttributeType(i);
-        switch (attributeType)
-        {
-			case Attribute::NUMERICAL:
-				findBestConditionForNumericalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
-				break;
-			case Attribute::NOMINAL:
-				findBestConditionForNominalAttribute(decClass, covered, uncoveredPositives, rqm, isRqmEntropy, i, equallyBestConditions, bestQuality);
-				break;
-        }
-    }
-
-    //when more than one condition is the best
-    if (equallyBestConditions.size() == 1)
-        bestCondition = equallyBestConditions.front();
-    else if (equallyBestConditions.size() > 1)
-        bestCondition = chooseConditionFromEqual(equallyBestConditions, decClass, uncoveredPositives);
-
-    return bestCondition;
-}
-
 int SequentialCovering::getNumberOfValuesLessOrGreater(multiset<double>& values, double value, bool takeLess)
 {
 	int cnt = 0;
@@ -348,8 +382,6 @@ void SequentialCovering::pruneRule(Rule& rule, SetOfExamples& examples, RuleQual
     double currentQuality;
     vector<ElementaryCondition> equallyWorstConds;
     Rule tempRule;
-    double apriori = P / (P + N);
-    Precision precision;
     ElementaryCondition* conditionToRemove;
     while (1)
     {
@@ -360,13 +392,13 @@ void SequentialCovering::pruneRule(Rule& rule, SetOfExamples& examples, RuleQual
             {
                 tempRule.removeCondition(*itList);
                 currentQuality = ruleQualityMeasure.EvaluateRuleQuality(examples, tempRule);
-                if ((currentQuality > bestQuality) && (precision.EvaluateRuleQuality(examples, tempRule) > apriori))
+                if (currentQuality > bestQuality)
                 {
                     bestQuality = currentQuality;
                     equallyWorstConds.clear();
                     equallyWorstConds.push_back(*itList);
                 }
-                else if((currentQuality == bestQuality) && (precision.EvaluateRuleQuality(examples, tempRule) > apriori))
+                else if((currentQuality == bestQuality) || (currentQuality != currentQuality && bestQuality != bestQuality))	//equal or both are NaN
                     equallyWorstConds.push_back(*itList);
                 tempRule.addCondition(*itList);
             }

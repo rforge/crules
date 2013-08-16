@@ -51,6 +51,11 @@ bool ElementaryCondition::operator ==(const ElementaryCondition& toCompare) cons
         return false;
 }
 
+bool ElementaryCondition::operator !=(const ElementaryCondition& toCompare) const
+{
+    return !(*this == toCompare);
+}
+
 
 string ElementaryCondition::toString()
 {

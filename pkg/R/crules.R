@@ -16,7 +16,7 @@ setMethod("show", "crules", .crules.print)
 crules.qPruneSet <- c("g2", "lift", "ls", "rss", "corr", "s", "c1", "c2", "cn2", "gain")
 crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 
-.prepare.data <- function(formula, data, q, qsplit, weights){
+.prepare.data <- function(formula, data, q, qsplit, weights, knowledge){
 
 	if(is.character(q)){	
 		q <- match.arg(q, crules.qPruneSet)
@@ -55,9 +55,12 @@ crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 	ylevels <- levels(y)
 	xdata <- .prepare.xdata(x)
 	
+	if(missing(knowledge))
+		knowledge <- NULL
+	
 	list(y = y, yname = yname, ylevels = ylevels, x = x, xtypes = xdata$xtypes, xnames = xdata$xnames,
 			xlevels = xdata$xlevels, q = q, qsplit = qsplit, qfun = qfun, qsplitfun = qsplitfun,
-			weights = weights, seed = runif(1))
+			weights = weights, seed = runif(1), knowledge = knowledge)
 }
 
 .check.weights <- function(weights, n){
@@ -67,6 +70,7 @@ crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 		stop("weights vector should be the same length as the number of examples")
 	else if(any(weights <= 0))
 		stop("weights cannot be negative numbers")
+	weights
 }
 
 .prepare.xdata <- function(x){
@@ -89,9 +93,9 @@ crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 	list(xnames = xnames, xtypes = xtypes, xlevels = xlevels)
 }
 
-crules <- function(formula, data, q, qsplit = q, weights)
+crules <- function(formula, data, q, qsplit = q, weights, knowledge)
 {
-	params <- .prepare.data(formula, data, q, qsplit, weights)
+	params <- .prepare.data(formula, data, q, qsplit, weights, knowledge)
 	#create object and call the method
 	rarc <- new(RInterface)
 	

@@ -27,6 +27,7 @@ public:
     bool isSatisfied(double value){ return (*_operator)(value, attributeValue); }
     ElementaryCondition& operator=(const ElementaryCondition&);
     bool operator==(const ElementaryCondition&)  const;
+    bool operator!=(const ElementaryCondition&)  const;
     void setAttributeIndex(int attributeIndex) { this->attributeIndex = attributeIndex; }
     int getAttributeIndex() const { return attributeIndex; }
     void setOperator(RelationalOperator* _operator) { this->_operator = _operator; }

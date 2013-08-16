@@ -7,7 +7,7 @@ Attribute::~Attribute()
 
 /**
  * The method returns the index number representing the attribute value decision-making in the vector of its unique value.
- * This allows you to encode the string, which is a number, so that the handling of data is more efficient.
+ * This allows to encode the string as a number, so that the handling of data is more efficient.
  * @param string newval, being the nominal value of the attribute.
  * @return index number representing the nominal value of an attribute.
  */

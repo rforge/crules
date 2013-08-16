@@ -10,9 +10,14 @@
 #include "Operator.h"
 #include "ConfusionMatrix.h"
 #include "SequentialCovering.h"
+#include "SequentialCoveringWithPreferences.h"
 #include "RuleClassifier.h"
 #include "RulesInductionException.h"
+#include "Knowledge.h"
+#include "KnowledgeCondition.h"
+#include "KnowledgeRule.h"
 #include <map>
+#include <list>
 #include <Rcpp.h>
 #include <limits>
 #include <ctime>
@@ -37,9 +42,13 @@ private:
     RuleClassifier deserializeRules(std::vector<std::string> _serialRules, std::vector<double> confidenceDegrees, DataSet& ds);
     double resolveConflict(std::list<Rule*>&);
     RuleQualityMeasure* createRuleQualityMeasure(std::string name, SEXP customRqm);
+    Knowledge* createKnowledgeObject(Rcpp::List& params, DataSet* dataSet);
+    SetOfConditions* getSetOfConditionsFromRConditions(Rcpp::S4& rConditions, DataSet* dataSet, int classIndex);
+    void fillListOfRulesWithRRules(std::list<KnowledgeRule>& rules, Rcpp::List& rRules, DataSet* dataSet, int classIndex);
     static double decrement(double value);
 };
 
+#ifndef _DEBUG
 RCPP_MODULE(crules_mod) {
     using namespace Rcpp;
     class_<RInterface > ("RInterface")
@@ -50,6 +59,7 @@ RCPP_MODULE(crules_mod) {
             ;
 
 }
+#endif
 
 /**
  * Represents custom measure defined by user in R.

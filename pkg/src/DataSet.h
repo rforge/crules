@@ -33,6 +33,7 @@ public:
     void addWeights(std::vector<double> weights) throw (RulesInductionException);
     Attribute& getConditionalAttribute(int index) {return attributes[index < decisionAttributeIndex ? index : index + 1]; }
     Attribute& getDecisionAttribute() {return attributes[decisionAttributeIndex]; }
+    int getConditionalAttributeIndex(std::string name);
 
 private:
     std::vector<Example> examples;

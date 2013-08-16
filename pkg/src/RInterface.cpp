@@ -22,13 +22,24 @@ Rcpp::List RInterface::generateRules(Rcpp::List params)
     	srand ( Rcpp::as<double>(params["seed"]) *  numeric_limits<unsigned int>::max());
         //creating data set
         DataSet* ds = createDataSet(params);
+        Knowledge* know = createKnowledgeObject(params, ds);
         SetOfExamples examples(*ds, true);
         //choosing rule quality measure
         RuleQualityMeasure* rqmGrowPtr = createRuleQualityMeasure(Rcpp::as<string>(params["qsplit"]), (SEXP)params["qsplitfun"]);
         RuleQualityMeasure* rqmPrunePtr = createRuleQualityMeasure(Rcpp::as<string>(params["q"]), (SEXP)params["qfun"]);
         //generating rules
-        SequentialCovering sc;
-        list<Rule> rules = sc.generateRules(examples, *rqmGrowPtr, *rqmPrunePtr);
+
+        list<Rule> rules;
+        if(know == NULL)
+        {
+        	SequentialCovering sc;
+        	rules = sc.generateRules(examples, *rqmGrowPtr, *rqmPrunePtr);
+        }
+        else
+        {
+        	SequentialCoveringWithPreferences scwp(know);
+        	rules = scwp.generateRules(examples, *rqmGrowPtr, *rqmPrunePtr);
+        }
         RuleClassifier ruleClassifier(rules);
 
         Rcpp::List result = serializeRules(ruleClassifier, examples);
@@ -302,4 +313,101 @@ Rcpp::List RInterface::crossValidation(Rcpp::List params)
 double RInterface::decrement(double value)
 {
 	return --value;
+}
+
+Knowledge* RInterface::createKnowledgeObject(Rcpp::List& params, DataSet* dataSet)
+{
+	if(Rf_isNull((SEXP)params["knowledge"]))
+		return NULL;
+
+	const char* ALLOWED_CONDITIONS = "allowedConditions";
+	const char* FORBIDDEN_CONDITIONS = "forbiddenConditions";
+	const char* ALLOWED_RULES = "allowedRules";
+	const char* FORBIDDEN_RULES = "forbiddenRules";
+	SetOfConditions* conditions;
+
+	int attrCount = dataSet->getAttributes().size() - 1;
+	Rcpp::S4 rKnow((SEXP)params["knowledge"]);
+	Knowledge* know = new Knowledge(attrCount, rKnow.slot("generateRulesForOtherClasses"), rKnow.slot("useSpecifiedOnly"));
+
+	Rcpp::List requirements(rKnow.slot("requirements"));
+
+	//for each class
+	unsigned int decAttrLevelsCount = dataSet->getDecisionAttribute().getLevels().size();
+	for(unsigned int classIndex = 0; classIndex < decAttrLevelsCount; classIndex++)
+	{
+		std::string className = dataSet->getDecisionAttribute().getStringValue(classIndex);
+		if(!requirements.containsElementNamed(className.c_str()))
+			continue;
+
+		Rcpp::List currentReqs((SEXP)requirements[className]);
+
+		if(currentReqs.containsElementNamed(ALLOWED_CONDITIONS))
+		{
+			Rcpp::S4 rConditions((SEXP)currentReqs[ALLOWED_CONDITIONS]);
+
+			conditions = getSetOfConditionsFromRConditions(rConditions, dataSet, classIndex);
+			know->getAllowedConditions()[classIndex] = *conditions;
+			delete conditions;
+		}
+		if(currentReqs.containsElementNamed(FORBIDDEN_CONDITIONS))
+		{
+			Rcpp::S4 rConditions((SEXP)currentReqs[FORBIDDEN_CONDITIONS]);
+
+			conditions = getSetOfConditionsFromRConditions(rConditions, dataSet, classIndex);
+			know->getForbiddenConditions()[classIndex] = *conditions;
+			delete conditions;
+		}
+		if(currentReqs.containsElementNamed(ALLOWED_RULES))
+		{
+			Rcpp::List rRules((SEXP)currentReqs[ALLOWED_RULES]);
+			fillListOfRulesWithRRules(know->getAllowedRules()[classIndex], rRules, dataSet, classIndex);
+		}
+		if(currentReqs.containsElementNamed(FORBIDDEN_RULES))
+		{
+			Rcpp::List rRules((SEXP)currentReqs[FORBIDDEN_RULES]);
+			fillListOfRulesWithRRules(know->getForbiddenRules()[classIndex], rRules, dataSet, classIndex);
+		}
+	}
+	return know;
+}
+
+SetOfConditions* RInterface::getSetOfConditionsFromRConditions(Rcpp::S4& rConditions, DataSet* dataSet, int classIndex)
+{
+	SetOfConditions* conditions = new SetOfConditions(classIndex, Rcpp::as<bool>(rConditions.slot("expandable")),
+										Rcpp::as<int>(rConditions.slot("rulesAtLeast")), Rcpp::as<bool>(rConditions.slot("forbidden")));
+
+	Rcpp::List rCondsList(rConditions.slot("setOfConditions"));
+
+	for(Rcpp::List::iterator it = rCondsList.begin(); it != rCondsList.end(); it++)
+	{
+		Rcpp::S4 rCond((SEXP)*it);
+		int attributeIndex = dataSet->getConditionalAttributeIndex(rCond.slot("attribute"));
+		KnowledgeCondition cond(attributeIndex, -1, rCond.slot("fixed"), rCond.slot("required"));
+
+		if(dataSet->getConditionalAttribute(attributeIndex).getType() == Attribute::NOMINAL)
+			cond.setValue(dataSet->getConditionalAttribute(attributeIndex).getDoubleValue(Rcpp::as<string>(rCond.slot("value"))));
+		else
+		{
+			cond.setFrom(Rcpp::as<double>(rCond.slot("from")));
+			cond.setTo(Rcpp::as<double>(rCond.slot("to")));
+		}
+
+		conditions->getConditions().push_back(cond);
+	}
+	return conditions;
+}
+
+void RInterface::fillListOfRulesWithRRules(std::list<KnowledgeRule>& rules, Rcpp::List& rRules, DataSet* dataSet, int classIndex)
+{
+	SetOfConditions* conditions;
+	for(Rcpp::List::iterator it = rRules.begin(); it != rRules.end(); it++)
+	{
+		Rcpp::S4 rRule((SEXP)*it);
+		Rcpp::S4 rConditions((SEXP)rRule.slot("conditions"));
+
+		conditions = getSetOfConditionsFromRConditions(rConditions, dataSet, classIndex);
+		rules.push_back(KnowledgeRule(*conditions));
+		delete conditions;
+	}
 }
