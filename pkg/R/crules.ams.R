@@ -1,4 +1,4 @@
-crules.ams <- function(formula, trainingSet, qPruneSet = crules.qPruneSet, 
+crules.ams <- function(formula, data, qPruneSet = crules.qPruneSet, 
 					   qGrowSet = crules.qGrowSet, criterion, folds = 10, byPair = FALSE) {
 	
 	if(criterion == "acc")
@@ -7,7 +7,7 @@ crules.ams <- function(formula, trainingSet, qPruneSet = crules.qPruneSet,
 		critIndex = 2
 	else if(criterion == "g-mean"){
 		critIndex = "g"
-		mf <- model.frame(formula, trainingSet, na.action=na.pass)
+		mf <- model.frame(formula, data, na.action=na.pass)
 		y <- mf[,1, drop=TRUE]
 		if(length(levels(factor(y))) > 2)
 			stop("G-mean criterion is not supported for multi-class data sets.")
@@ -18,10 +18,10 @@ crules.ams <- function(formula, trainingSet, qPruneSet = crules.qPruneSet,
 	useCV <- TRUE
 	
 	if(folds > 0 && folds < 1){
-		trLength <- round(nrow(trainingSet) * folds)
-		trNumbers <- sample(nrow(trainingSet), trLength)
-		trSet <- trainingSet[trNumbers,]
-		valSet <- trainingSet[-trNumbers,]
+		trLength <- round(nrow(data) * folds)
+		trNumbers <- sample(nrow(data), trLength)
+		trSet <- data[trNumbers,]
+		valSet <- data[-trNumbers,]
 		useCV <- FALSE
 	}
 
@@ -30,8 +30,13 @@ crules.ams <- function(formula, trainingSet, qPruneSet = crules.qPruneSet,
 	bestQGrow <- NA
 	
 	computeAndUpdate <- function(qPrunePar, qGrowPar){
+		if(is.list(qPrunePar))
+			qPrunePar = qPrunePar[[1]];
+		if(is.list(qGrowPar))
+			qGrowPar = qGrowPar[[1]];
+		
 		if(useCV){
-			cv <- crules.cv(formula, trainingSet, qPrunePar, qGrowPar, folds = folds)
+			cv <- crules.cv(formula, data, qPrunePar, qGrowPar, folds = folds)
 			if(critIndex != "g")
 				currCrit <- mean(cv)$Statistics[critIndex, "Mean"]
 			else
@@ -72,7 +77,7 @@ crules.ams <- function(formula, trainingSet, qPruneSet = crules.qPruneSet,
 	BestCriterions <- c(bestQPrune, bestQGrow)
 	names(BestCriterions) <- c("Growth", "Pruning")
 	
-	list(Rules = crules(formula, trainingSet, bestQPrune, bestQGrow), 
+	list(Rules = crules(formula, data, bestQPrune, bestQGrow), 
 		 BestCriterions = BestCriterions)
 } 
 
