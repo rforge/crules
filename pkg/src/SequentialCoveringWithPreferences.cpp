@@ -65,7 +65,7 @@ list<Rule> SequentialCoveringWithPreferences::generateRulesForClass(SetOfExample
 
     //try to improve specified rules
     list<KnowledgeRule>::iterator itKnowRule = knowledge->getAllowedRules()[decClass].begin();
-    for(list<Rule>::iterator itRule = ruleSet.begin(); itRule != ruleSet.end(); itRule++, itKnowRule++)
+    for(list<Rule>::iterator itRule = ruleSet.begin(); itRule != ruleSet.end() && uncoveredPositives.size() > 0; itRule++, itKnowRule++)
 	{
     	if(!itKnowRule->getConditions().isExpandable())
     		continue;	//if not expandable, don't try to improve it
@@ -107,7 +107,7 @@ list<Rule> SequentialCoveringWithPreferences::generateRulesForClass(SetOfExample
     //create new rules
     if(knowledge->getAllowedRules()[decClass].size() == 0 || !knowledge->isUseSpecifiedOnly())
     {
-		while (uncoveredPositives.size() != 0)
+		while (uncoveredPositives.size() > 0)
 		{
 			SetOfExamples covered(examples);
 			Rule rule;
