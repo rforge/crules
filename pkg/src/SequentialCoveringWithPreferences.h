@@ -58,7 +58,7 @@ private:
 
 	bool isConditionForbiddenInRule(Rule& rule, double decClass, int attributeIndex, double value, bool greaterEqual, bool nominal);
 
-	Rule* getRuleFromKnowledgeRule(KnowledgeRule& kRule);
+	Rule* getRuleFromKnowledgeRule(KnowledgeRule& kRule, bool fixedAndRequiredOnly = false);
 
 	Knowledge* knowledge;
 	double P; /**< Number of all positive examples*/

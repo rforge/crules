@@ -53,10 +53,18 @@ list<Rule> SequentialCoveringWithPreferences::generateRulesForClass(SetOfExample
     Rule* tempRule;
     for(list<KnowledgeRule>::iterator it = knowledge->getAllowedRules()[decClass].begin(); it != knowledge->getAllowedRules()[decClass].end(); it++)
     {
-    	tempRule = getRuleFromKnowledgeRule(*it);
+    	tempRule = getRuleFromKnowledgeRule(*it, true);	//create rule with only fixed and required conditions to compute uncoveredPositives
 
-    	SetOfExamples covered(getCoveredExamples(*tempRule, examples));
-    	uncoveredPositives = uncoveredPositives - covered;
+    	if(tempRule->getConditions().size() > 0)
+    	{
+			SetOfExamples covered(getCoveredExamples(*tempRule, examples));
+			uncoveredPositives = uncoveredPositives - covered;
+    	}
+
+    	delete tempRule;
+
+    	tempRule = getRuleFromKnowledgeRule(*it, false);
+
     	tempRule->setConfidenceDegree(rqmPrune.EvaluateRuleQuality(examples, *tempRule));
 		ruleSet.push_back(*tempRule);
 
@@ -396,7 +404,8 @@ bool SequentialCoveringWithPreferences::isNumericConditionSpecified(double value
 	{
 		if(it->isFixed())
 		{
-			if((greaterEqual && value == it->getFrom()) || (!greaterEqual && value == it->getTo()))
+			if((greaterEqual && (value == it->getFrom() || it->getFrom() == -numeric_limits<double>::infinity())) ||
+			   (!greaterEqual && (value == it->getTo() || it->getTo() == numeric_limits<double>::infinity())))
 			{
 				result = andRequired ? it->isRequired() : true;
 				if(result)
@@ -798,7 +807,7 @@ bool SequentialCoveringWithPreferences::existsExampleWithEqualAttValue(int attIn
 }
 
 
-Rule* SequentialCoveringWithPreferences::getRuleFromKnowledgeRule(KnowledgeRule& kRule)
+Rule* SequentialCoveringWithPreferences::getRuleFromKnowledgeRule(KnowledgeRule& kRule, bool fixedAndRequiredOnly)
 {
 	Rule* rule = new Rule();
 	SetOfConditions& kConds = kRule.getConditions();
@@ -808,6 +817,9 @@ Rule* SequentialCoveringWithPreferences::getRuleFromKnowledgeRule(KnowledgeRule&
 	for(list<KnowledgeCondition>::iterator it = kRule.getConditions().getConditions().begin();
 			it != kRule.getConditions().getConditions().end(); it++)
 	{
+		if(fixedAndRequiredOnly && !(it->isFixed() && it->isRequired()))
+			continue;
+
 		if(it->getValue() == it->getValue())
 		{
 			ElementaryCondition newCondition(it->getAttributeIndex(), new EqualityOperator(), it->getValue());
