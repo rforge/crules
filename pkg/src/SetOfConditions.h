@@ -11,7 +11,7 @@ public:
 		conditions(conditions), decisionClass(decisionClass), expandable(expandable), rulesAtLeast(rulesAtLeast), forbidden(forbidden) {}
 	SetOfConditions(double decisionClass, bool expandable, int rulesAtLeast, bool forbidden) :
 			decisionClass(decisionClass), expandable(expandable), rulesAtLeast(rulesAtLeast), forbidden(forbidden) {}
-	SetOfConditions(const SetOfConditions& orig) :SetOfConditions(orig.conditions, orig.decisionClass, orig.expandable, orig.rulesAtLeast, orig.forbidden) {}
+	//SetOfConditions(const SetOfConditions& orig) :SetOfConditions(orig.conditions, orig.decisionClass, orig.expandable, orig.rulesAtLeast, orig.forbidden) {}
 	virtual ~SetOfConditions() {}
 
 	std::list<KnowledgeCondition>& getConditions() {

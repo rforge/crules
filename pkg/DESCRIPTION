@@ -1,8 +1,8 @@
 Package: crules
 Type: Package
 Title: Classification Rules
-Version: 0.1
-Date: 2013-03-12
+Version: 0.9.1
+Date: 2013-08-21
 Authors@R: c(person("Wojciech", "Malara", role = c("aut", "cre"), email = "wojcmal238@student.polsl.pl"),
              person("Marek", "Sikora", role = "aut", email="marek.sikora@polsl.pl"), 
              person("Lukasz", "Wrobel", role = c("aut", "cre"), email = "lukasz.wrobel@polsl.pl"))
