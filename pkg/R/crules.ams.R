@@ -1,5 +1,5 @@
 crules.ams <- function(formula, data, qPruneSet = crules.qPruneSet, 
-					   qGrowSet = crules.qGrowSet, criterion, folds = 10, byPair = FALSE) {
+					   qGrowSet = crules.qGrowSet, criterion = "acc", folds = 10, byPair = FALSE) {
 	
 	if(criterion == "acc")
 		critIndex = 1

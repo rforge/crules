@@ -48,7 +48,6 @@ private:
     static double decrement(double value);
 };
 
-#ifndef _DEBUG
 RCPP_MODULE(crules_mod) {
     using namespace Rcpp;
     class_<RInterface > ("RInterface")
@@ -59,7 +58,6 @@ RCPP_MODULE(crules_mod) {
             ;
 
 }
-#endif
 
 /**
  * Represents custom measure defined by user in R.

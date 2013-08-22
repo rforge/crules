@@ -16,8 +16,6 @@ list<Rule> SequentialCovering::generateRules(SetOfExamples& examples, RuleQualit
     vector<double>::iterator it;
     for(it = classes.begin(); it != classes.end(); it++)
     {
-    	//KNOW: if(knowledge[*it].size() == 0 && knowledge.generateRulesForOtherClasses)
-    	//KNOW:	continue;
         list<Rule> rulesForClass(generateRulesForClass(examples, rqmGrow, rqmPrune, *it));
         ruleSet.insert(ruleSet.end(), rulesForClass.begin(), rulesForClass.end());
     }
@@ -36,26 +34,11 @@ list<Rule> SequentialCovering::generateRulesForClass(SetOfExamples& examples, Ru
 {
     list<Rule> ruleSet;
     SetOfExamples uncoveredPositives(examples.getExamplesForDecAtt(decClass));
-    //P = uncoveredPositives.size();
     P = uncoveredPositives.getSumOfWeights();
-    //N = examples.size() - P;
     N = examples.getSumOfWeights() - P;
     double apriori = P / (P + N);
     Precision precision;
     vector<list<ElementaryCondition> >::iterator itVec;
-
-//	KNOW: foreach(rule in knowledge[decClass].rules)
-//	{
-//		SetOfExamples covered(examples);
-//		growSpecifiedRule(rule, covered, uncoveredPositives, rqmGrow, knowlegde);
-//		pruneSPecifiedRule(rules, examples, rqmPrune, knowledge);
-//        uncoveredPositives = uncoveredPositives - covered;
-//        rule.setConfidenceDegree(rqmPrune.EvaluateRuleQuality(examples, rule));
-//        ruleSet.push_back(rule);
-//	}
-
-//    if(!useSpecifiedOnly)
-//    {
 
     while (uncoveredPositives.size() != 0)
     {
@@ -129,13 +112,6 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
         //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
     }
 }
-
-//KNOW:
-//void CheckCondition(checkedCondition, Rule currentRule, forbiddenRules, allowedConditions, forbiddenConditions)
-//{
-//
-//}
-
 
 /**
  * Finds the best elementary condition from all possible ones
