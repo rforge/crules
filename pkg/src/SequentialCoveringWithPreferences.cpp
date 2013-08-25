@@ -162,32 +162,49 @@ void SequentialCoveringWithPreferences::growRule(Rule& rule, SetOfExamples& cove
     RuleEvaluationResult rer;
     double coveredCount = 0, prevCoveredCount = 0;
     bool isEntropy = typeid (ruleQualityMeasure) == typeid (NegConditionalEntropy);
+    bool shouldBreak = false, unspecifiedChecked = false, checkUnspecified = true;
 
-    while (1)
+    while (uncoveredPositives.size() > 0)
     {
         bestCondition = findBestCondition(rule, decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy,  useSpecifiedOnly, knowRule);
 
-        //if it wasn't possible to find best condition from specified, then if conditions are "expandable"
-        //and "useSpecifiedOnly" (global, not this method parameter) is not true, try to use other conditions
-        if (bestCondition.getAttributeIndex() == -1 && knowledge->getAllowedConditions()[decClass].isExpandable() && !knowledge->isUseSpecifiedOnly() && useSpecifiedOnly)
-        	bestCondition = findBestCondition(rule, decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy, false, knowRule);
-
-        if(bestCondition.getAttributeIndex() == -1)
-            break;
-        //cout << "Best condition:" << bestCondition.toString(covered.getDataSet()) << endl;
-
-        //checking stop criterion
-        rer = RuleQualityMeasure::EvaluateCondition(covered, bestCondition, decClass);
-        if (rer.n == 0)
+        unspecifiedChecked = false;
+        checkUnspecified = true;
+        while(!unspecifiedChecked || checkUnspecified)
         {
-            rule.addCondition(bestCondition);
-        	//rule.addConditionAndOptimize(bestCondition);
-            //cout << "Added condition: " << bestCondition.toString(covered.getDataSet()) << endl;
-            break;
+        	shouldBreak = false;
+
+			if(bestCondition.getAttributeIndex() == -1)
+				shouldBreak = true;
+
+			//checking stop criterion
+			if(!shouldBreak)
+			{
+				rer = RuleQualityMeasure::EvaluateCondition(covered, bestCondition, decClass);
+				if (rer.n == 0)
+				{
+					rule.addCondition(bestCondition);
+					shouldBreak = true;
+				}
+				coveredCount = rer.p + rer.n;
+				if(coveredCount == prevCoveredCount)
+					shouldBreak = true;
+			}
+
+			//if it wasn't possible to find best condition from specified, then if conditions are "expandable"
+			//and "useSpecifiedOnly" (global, not this method parameter) is not true, try to use other conditions
+			if(!unspecifiedChecked && shouldBreak && knowledge->getAllowedConditions()[decClass].isExpandable() && !knowledge->isUseSpecifiedOnly() && useSpecifiedOnly)
+			{
+	        	bestCondition = findBestCondition(rule, decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy, false, knowRule);
+			}
+			else
+				checkUnspecified = false;
+
+			unspecifiedChecked = true;
         }
-        coveredCount = rer.p + rer.n;
-        if(coveredCount == prevCoveredCount)
-            break;
+
+        if(shouldBreak)
+        	break;
 
         covered = getCoveredExamples(bestCondition, covered);
         uncoveredPositives = getCoveredExamples(bestCondition, uncoveredPositives);
@@ -404,8 +421,8 @@ bool SequentialCoveringWithPreferences::isNumericConditionSpecified(double value
 	{
 		if(it->isFixed())
 		{
-			if((greaterEqual && (value == it->getFrom() || it->getFrom() == -numeric_limits<double>::infinity())) ||
-			   (!greaterEqual && (value == it->getTo() || it->getTo() == numeric_limits<double>::infinity())))
+			if((greaterEqual && (value == it->getFrom() || (it->getFrom() == -numeric_limits<double>::infinity() && value < it->getTo()))) ||
+			   (!greaterEqual && (value == it->getTo() || (it->getTo() == numeric_limits<double>::infinity() && value <= it->getFrom()))))
 			{
 				result = andRequired ? it->isRequired() : true;
 				if(result)
@@ -495,8 +512,8 @@ void SequentialCoveringWithPreferences::findBestConditionForNominalAttribute
 		for(list<KnowledgeCondition>::iterator kCond = knowledge->getAllowedConditions()[decClass].getConditions().begin();
 				kCond != knowledge->getAllowedConditions()[decClass].getConditions().end(); kCond++)
 		{
-			if(kCond->getAttributeIndex() == attributeIndex && (isNominalConditionForbidden(rule, decClass, attributeIndex, kCond->getValue()) ||
-				!existsExampleWithEqualAttValue(attributeIndex, kCond->getValue(), uncoveredPositives)))
+			if(kCond->getAttributeIndex() != attributeIndex || isNominalConditionForbidden(rule, decClass, attributeIndex, kCond->getValue()) ||
+				!existsExampleWithEqualAttValue(attributeIndex, kCond->getValue(), uncoveredPositives))
 						continue;
 
 			RuleEvaluationResult rer = values[kCond->getValue()];
@@ -820,10 +837,13 @@ Rule* SequentialCoveringWithPreferences::getRuleFromKnowledgeRule(KnowledgeRule&
 		if(fixedAndRequiredOnly && !(it->isFixed() && it->isRequired()))
 			continue;
 
-		if(it->getValue() == it->getValue())
+		if(it->getAttributeType() == Attribute::NOMINAL)
 		{
-			ElementaryCondition newCondition(it->getAttributeIndex(), new EqualityOperator(), it->getValue());
-			rule->addCondition(newCondition);
+			if(it->getValue() == it->getValue())
+			{
+				ElementaryCondition newCondition(it->getAttributeIndex(), new EqualityOperator(), it->getValue());
+				rule->addCondition(newCondition);
+			}
 		}
 		else
 		{

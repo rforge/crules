@@ -84,7 +84,7 @@ void SequentialCovering::growRule(Rule& rule, SetOfExamples& covered, SetOfExamp
     double coveredCount = 0, prevCoveredCount = 0;
     bool isEntropy = typeid (ruleQualityMeasure) == typeid (NegConditionalEntropy);
 
-    while (1)
+    while (uncoveredPositives.size() > 0)
     {
         bestCondition = findBestCondition(decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy);
         if (bestCondition.getAttributeIndex() == -1)

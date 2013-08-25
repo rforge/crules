@@ -58,7 +58,7 @@ crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 	if(missing(knowledge))
 		knowledge <- NULL
 	
-	list(y = y, yname = yname, ylevels = ylevels, x = x, xtypes = xdata$xtypes, xnames = xdata$xnames,
+	list(y = y, yname = yname, ylevels = ylevels, x = xdata$x, xtypes = xdata$xtypes, xnames = xdata$xnames,
 			xlevels = xdata$xlevels, q = q, qsplit = qsplit, qfun = qfun, qsplitfun = qsplitfun,
 			weights = weights, seed = runif(1), knowledge = knowledge)
 }
@@ -90,7 +90,7 @@ crules.qGrowSet <- c(crules.qPruneSet, "entropy")
 		else
 			stop("Conditional attributes can only be of numeric, factor, character or logical type")
 	}
-	list(xnames = xnames, xtypes = xtypes, xlevels = xlevels)
+	list(x = x, xnames = xnames, xtypes = xtypes, xlevels = xlevels)
 }
 
 crules <- function(formula, data, q, qsplit = q, weights, knowledge)

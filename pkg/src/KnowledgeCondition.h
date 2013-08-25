@@ -1,17 +1,18 @@
 #ifndef KNOWLEDGECONDITION_H_
 #define KNOWLEDGECONDITION_H_
 #include<limits>
+#include "Attribute.h"
 
 class KnowledgeCondition {
 public:
 	KnowledgeCondition() : attributeIndex(-1), from(-std::numeric_limits<double>::max()),
-							to(std::numeric_limits<double>::max()), fixed(false), required(false){}
+							to(std::numeric_limits<double>::max()), fixed(false), required(false), attributeType(Attribute::NUMERICAL){}
 
 	KnowledgeCondition(int attributeIndex, double from, double to, bool fixed, bool required) : attributeIndex(attributeIndex), from(from),
-								to(to), fixed(fixed), required(required){}
+								to(to), fixed(fixed), required(required), attributeType(Attribute::NUMERICAL){}
 
 	KnowledgeCondition(int attributeIndex, double value, bool fixed, bool required) : attributeIndex(attributeIndex), from(value),
-									to(value), fixed(fixed), required(required){}
+									to(value), fixed(fixed), required(required), attributeType(Attribute::NOMINAL){}
 
 	virtual ~KnowledgeCondition() {}
 
@@ -63,12 +64,21 @@ public:
 		this->to = to;
 	}
 
+	Attribute::AttributeType getAttributeType() const {
+			return attributeType;
+		}
+
+	void setAttributeType(Attribute::AttributeType attributeType) {
+		this->attributeType = attributeType;
+	}
+
 private:
 	int attributeIndex;
 	double from;
 	double to;
 	bool fixed;
 	bool required;
+	Attribute::AttributeType attributeType;
 };
 
 #endif /* KNOWLEDGECONDITION_H_ */

@@ -326,14 +326,14 @@ Knowledge* RInterface::createKnowledgeObject(Rcpp::List& params, DataSet* dataSe
 	const char* FORBIDDEN_RULES = "forbiddenRules";
 	SetOfConditions* conditions;
 
-	int attrCount = dataSet->getAttributes().size() - 1;
 	Rcpp::S4 rKnow((SEXP)params["knowledge"]);
-	Knowledge* know = new Knowledge(attrCount, rKnow.slot("generateRulesForOtherClasses"), rKnow.slot("useSpecifiedOnly"));
 
 	Rcpp::List requirements(rKnow.slot("requirements"));
-
-	//for each class
 	unsigned int decAttrLevelsCount = dataSet->getDecisionAttribute().getLevels().size();
+
+	Knowledge* know = new Knowledge(decAttrLevelsCount, rKnow.slot("generateRulesForOtherClasses"), rKnow.slot("useSpecifiedOnly"));
+
+
 	for(unsigned int classIndex = 0; classIndex < decAttrLevelsCount; classIndex++)
 	{
 		std::string className = dataSet->getDecisionAttribute().getStringValue(classIndex);
@@ -386,11 +386,31 @@ SetOfConditions* RInterface::getSetOfConditionsFromRConditions(Rcpp::S4& rCondit
 		KnowledgeCondition cond(attributeIndex, -1, rCond.slot("fixed"), rCond.slot("required"));
 
 		if(dataSet->getConditionalAttribute(attributeIndex).getType() == Attribute::NOMINAL)
-			cond.setValue(dataSet->getConditionalAttribute(attributeIndex).getDoubleValue(Rcpp::as<string>(rCond.slot("value"))));
+		{
+			double value = dataSet->getConditionalAttribute(attributeIndex).getDoubleValue(Rcpp::as<string>(rCond.slot("value")));
+			if(value == value)
+			{
+				cond.setValue(value);
+				cond.setAttributeType(Attribute::NOMINAL);
+			}
+			else
+			{
+				for(std::vector<std::string>::iterator levelIt = dataSet->getConditionalAttribute(attributeIndex).getLevels().begin();
+						levelIt != dataSet->getConditionalAttribute(attributeIndex).getLevels().end(); levelIt++)
+				{
+					cond.setValue(dataSet->getConditionalAttribute(attributeIndex).getDoubleValue(*levelIt));
+					cond.setAttributeType(Attribute::NOMINAL);
+					conditions->getConditions().push_back(cond);
+				}
+				continue;	//don't put the last condition again
+			}
+
+		}
 		else
 		{
 			cond.setFrom(Rcpp::as<double>(rCond.slot("from")));
 			cond.setTo(Rcpp::as<double>(rCond.slot("to")));
+			cond.setAttributeType(Attribute::NUMERICAL);
 		}
 
 		conditions->getConditions().push_back(cond);

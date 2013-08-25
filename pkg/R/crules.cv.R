@@ -79,15 +79,19 @@ setMethod("mean", "crules.cv", function(x){
 			list(Statistics = result, "Average confusion matrix" = cm)
 		})
 
-setMethod("as.data.frame", "crules.cv", function(x){
+setMethod("as.data.frame", "crules.cv", function(x, dataname, qname, qsplitname){
 			size <- length(x@results)
 			if(size > 0) 
 				size <- length(x@results[[1]]) * size
 			else stop("Cannot use results of 0 runs")
-			dataname <- as.character(x@results[[1]][[1]][[1]]@call["data"])
-			qname <- as.character(x@results[[1]][[1]][[1]]@call["q"])
-			qsplitname <- as.character(x@results[[1]][[1]][[1]]@call["qsplit"])
-			if(qsplitname == "NULL") qsplitname <- qname
+			if(missing(dataname))
+				dataname <- as.character(x@results[[1]][[1]][[1]]@call["data"])
+			if(missing(qname))
+				qname <- as.character(x@results[[1]][[1]][[1]]@call["q"])
+			if(missing(qsplitname)){
+				qsplitname <- as.character(x@results[[1]][[1]][[1]]@call["qsplit"])
+				if(qsplitname == "NULL") qsplitname <- qname
+			}
 			dataset <- rep(dataname, size)
 			experiment <- rep(paste(qsplitname, qname, sep="-"), size)
 			runs <- vector("integer", size)
