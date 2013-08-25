@@ -48,6 +48,7 @@ private:
 	ElementaryCondition chooseConditionFromEqual(std::list<ElementaryCondition>& equallyBestConditions, double decClass, SetOfExamples& uncoveredPositives);
 	int getNumberOfValuesLessOrGreater(std::multiset<double>& values, double value, bool takeLess);
 
+	bool isNominalConditionSpecified(double value, std::list<KnowledgeCondition>& conditions, bool andRequired = false);
 	bool isNominalConditionForbidden(Rule& rule, double decClass, int attributeIndex, double value);
 	bool isNominalConditionRequired(ElementaryCondition& condition, Rule& rule);
 

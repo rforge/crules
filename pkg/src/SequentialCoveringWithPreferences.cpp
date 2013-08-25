@@ -170,10 +170,9 @@ void SequentialCoveringWithPreferences::growRule(Rule& rule, SetOfExamples& cove
 
         unspecifiedChecked = false;
         checkUnspecified = true;
+        shouldBreak = false;
         while(!unspecifiedChecked || checkUnspecified)
         {
-        	shouldBreak = false;
-
 			if(bestCondition.getAttributeIndex() == -1)
 				shouldBreak = true;
 
@@ -185,6 +184,8 @@ void SequentialCoveringWithPreferences::growRule(Rule& rule, SetOfExamples& cove
 				{
 					rule.addCondition(bestCondition);
 					shouldBreak = true;
+					checkUnspecified = false;
+					unspecifiedChecked = true;
 				}
 				coveredCount = rer.p + rer.n;
 				if(coveredCount == prevCoveredCount)
@@ -196,6 +197,7 @@ void SequentialCoveringWithPreferences::growRule(Rule& rule, SetOfExamples& cove
 			if(!unspecifiedChecked && shouldBreak && knowledge->getAllowedConditions()[decClass].isExpandable() && !knowledge->isUseSpecifiedOnly() && useSpecifiedOnly)
 			{
 	        	bestCondition = findBestCondition(rule, decClass, covered, uncoveredPositives, ruleQualityMeasure, isEntropy, false, knowRule);
+	        	shouldBreak = false;
 			}
 			else
 				checkUnspecified = false;
@@ -403,10 +405,10 @@ void SequentialCoveringWithPreferences::findBestConditionForNumericalAttribute
 			equallyBestConditions.clear();
 		}
 
-		if(quality >= ltQuality)
+		if(quality >= ltQuality && quality > -std::numeric_limits<double>::max())
 			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new GreaterEqualOperator(), mean));
 
-		if(quality <= ltQuality)
+		if(quality <= ltQuality && ltQuality > -std::numeric_limits<double>::max())
 			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new LessThanOperator(), mean));
 
 		//cout << "Value: " << mean << "\tltQuality: " << ltQuality << "\tgtQuality: " << quality << endl;
@@ -529,7 +531,7 @@ void SequentialCoveringWithPreferences::findBestConditionForNominalAttribute
 																			p - rer.p, n - rer.n);
 			}
 
-			if (quality < bestQuality) continue;
+			if (quality < bestQuality || quality == -std::numeric_limits<double>::max() || quality != quality) continue;
 
 			if(quality > bestQuality)
 			{
@@ -559,7 +561,7 @@ void SequentialCoveringWithPreferences::findBestConditionForNominalAttribute
 																			p - val->second.p, n - val->second.n);
 			}
 
-			if (quality < bestQuality) continue;
+			if (quality < bestQuality || quality == -std::numeric_limits<double>::max() || quality != quality) continue;
 
 			if(quality > bestQuality)
 			{
@@ -695,13 +697,39 @@ bool SequentialCoveringWithPreferences::isNominalConditionRequired(ElementaryCon
 	double value = condition.getAttributeValue();
 
 	bool result = false;
-	for(list<KnowledgeCondition>::iterator kCond = knowledge->getAllowedConditions()[decClass].getConditions().begin();
-			kCond != knowledge->getAllowedConditions()[decClass].getConditions().end(); kCond++)
+	list<KnowledgeCondition> conditions = knowledge->getAllowedConditions()[decClass].getConditionsForAttribute(attributeIndex);
+
+	if(isNominalConditionSpecified(value, conditions, true))
 	{
-		if(kCond->isRequired() && kCond->getAttributeIndex() == attributeIndex && kCond->getValue() == value)
+		int numberOfRequired = 0;
+
+		if(rule.getConditions()[attributeIndex].size() > 1)
+		{
+			for(list<ElementaryCondition>::iterator it = rule.getConditions()[attributeIndex].begin(); it != rule.getConditions()[attributeIndex].end(); it++)
+				if(isNominalConditionSpecified(it->getAttributeValue(), conditions, true))	//is specified and required
+					numberOfRequired++;
+		}
+
+		if(numberOfRequired < 2)
 		{
 			result = true;
-			break;
+		}
+	}
+
+	return result;
+}
+
+bool SequentialCoveringWithPreferences::isNominalConditionSpecified(double value,list<KnowledgeCondition>& conditions, bool andRequired)
+{
+	bool result = false;
+
+	for(list<KnowledgeCondition>::iterator it = conditions.begin(); it != conditions.end(); it++)
+	{
+		if(it->getValue() == value)
+		{
+			result = andRequired ? it->isRequired() : true;
+			if(result)
+				break;
 		}
 	}
 
@@ -905,25 +933,28 @@ bool SequentialCoveringWithPreferences::isConditionForbiddenInRule(Rule& rule, d
 				//check if "itCondPrime" condition from forbidden rule is present in current rule
 				bool isConditionPresent = false;
 
-				if(itForbCondPrime->getValue() == itForbCondPrime->getValue())	//if nominal attribute
+				if(rule.getConditions().size() > (unsigned int)itForbCondPrime->getAttributeIndex())
 				{
-					for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
+					if(itForbCondPrime->getAttributeType() == Attribute::NOMINAL)
 					{
-						if(itForbCondPrime->getValue() == itElCond->getAttributeValue())
+						for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
 						{
-							isConditionPresent = true;
-							break;
+							if(itForbCondPrime->getValue() == itElCond->getAttributeValue())
+							{
+								isConditionPresent = true;
+								break;
+							}
 						}
 					}
-				}
-				else if(rule.getConditions().size() > itForbCondPrime->getAttributeIndex())
-				{
-					for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
+					else
 					{
-						if(isConitionsInterceptionNotEmpty(decClass, itElCond->getAttributeIndex(), itElCond->getAttributeValue(), typeid(*itElCond->getOperator()) == typeid(GreaterEqualOperator), *itForbCondPrime))
+						for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
 						{
-							isConditionPresent = true;
-							break;
+							if(isConitionsInterceptionNotEmpty(decClass, itElCond->getAttributeIndex(), itElCond->getAttributeValue(), typeid(*itElCond->getOperator()) == typeid(GreaterEqualOperator), *itForbCondPrime))
+							{
+								isConditionPresent = true;
+								break;
+							}
 						}
 					}
 				}

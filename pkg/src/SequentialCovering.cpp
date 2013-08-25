@@ -245,10 +245,10 @@ void SequentialCovering::findBestConditionForNumericalAttribute
 			equallyBestConditions.clear();
 		}
 
-		if(quality >= ltQuality)
+		if(quality >= ltQuality && quality > -std::numeric_limits<double>::max())
 			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new GreaterEqualOperator(), mean));
 
-		if(quality <= ltQuality)
+		if(quality <= ltQuality && ltQuality > -std::numeric_limits<double>::max())
 			equallyBestConditions.push_back(ElementaryCondition(attributeIndex, new LessThanOperator(), mean));
 
 		//cout << "Value: " << mean << "\tltQuality: " << ltQuality << "\tgtQuality: " << quality << endl;
@@ -296,7 +296,7 @@ void SequentialCovering::findBestConditionForNominalAttribute
 																		p - val->second.p, n - val->second.n);
 		}
 
-		if (quality < bestQuality) continue;
+		if (quality < bestQuality || quality == -std::numeric_limits<double>::max() || quality != quality) continue;
 
 		if(quality > bestQuality)
 		{
