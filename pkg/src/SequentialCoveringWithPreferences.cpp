@@ -937,12 +937,20 @@ bool SequentialCoveringWithPreferences::isConditionForbiddenInRule(Rule& rule, d
 				{
 					if(itForbCondPrime->getAttributeType() == Attribute::NOMINAL)
 					{
-						for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
+						if(rule.getConditions()[attributeIndex].size() == 0 && itForbRule->getConditions().getConditionsForAttribute(attributeIndex).size() > 1)
 						{
-							if(itForbCondPrime->getValue() == itElCond->getAttributeValue())
+							isConditionPresent = true;
+						}
+						else
+						{
+							for(list<ElementaryCondition>::iterator itElCond = rule.getConditions()[itForbCondPrime->getAttributeIndex()].begin(); itElCond != rule.getConditions()[itForbCondPrime->getAttributeIndex()].end(); itElCond++)
 							{
-								isConditionPresent = true;
-								break;
+								if(itForbCondPrime->getValue() == itElCond->getAttributeValue() ||
+										itForbRule->getConditions().getConditionsForAttribute(itForbCondPrime->getAttributeIndex()).size() > 1)
+								{
+									isConditionPresent = true;
+									break;
+								}
 							}
 						}
 					}
