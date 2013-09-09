@@ -74,7 +74,7 @@ crules.ams <- function(formula, data, qPruneSet = crules.qPruneSet,
 		}
 	}
 	
-	BestCriterions <- c(bestQPrune, bestQGrow)
+	BestCriterions <- c(bestQGrow, bestQPrune)
 	names(BestCriterions) <- c("Growth", "Pruning")
 	
 	list(Rules = crules(formula, data, bestQPrune, bestQGrow), 
