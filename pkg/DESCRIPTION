@@ -1,11 +1,11 @@
 Package: crules
 Type: Package
 Title: Classification Rules
-Version: 0.9.1
-Date: 2013-08-21
-Authors@R: c(person("Wojciech", "Malara", role = c("aut", "cre"), email = "wojcmal238@student.polsl.pl"),
+Version: 0.9.2
+Date: 2015-12-07
+Authors@R: c(person("Wojciech", "Malara", role = "aut"),
              person("Marek", "Sikora", role = "aut", email="marek.sikora@polsl.pl"), 
-             person("Lukasz", "Wrobel", role = c("aut", "cre"), email = "lukasz.wrobel@polsl.pl"))
+             person("Lukasz", "Wrobel", role = "cre", email = "lukasz.wrobel@polsl.pl"))
 Description: Classification Rules
 License: GPL (>= 2)
 Depends: R (>= 2.15.1), methods, Rcpp (>= 0.10.2)

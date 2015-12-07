@@ -50,7 +50,7 @@ setClass("crules.knowledge", representation(generateRulesForOtherClasses  = "log
 #- forbiddenRules, allowedRules - lists of crules.rule class objects 
 #- forbiddenConditions, allowedConditions - crules.conditions class objects
 
-setMethod("c", c("crules.knowledge", "ANY"),
+setMethod("c", "crules.knowledge",
 		function(x, ...){
 			added <- list(...);
 			
